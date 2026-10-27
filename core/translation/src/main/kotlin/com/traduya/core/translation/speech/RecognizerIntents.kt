@@ -8,7 +8,8 @@ import com.traduya.core.model.TranscriptionConfig
 
 internal object RecognizerIntents {
 
-    private const val SILENCE_TO_END_MILLIS = 1_200L
+    // El servicio de Google lo lee como Int: si se envía Long lo ignora
+    private const val SILENCE_TO_END_MILLIS = 1_200
 
     fun build(context: Context, config: TranscriptionConfig, autoDetect: Boolean): Intent =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
