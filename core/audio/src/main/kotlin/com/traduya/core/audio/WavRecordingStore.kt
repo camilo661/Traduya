@@ -28,6 +28,7 @@ internal class WavWriter(private val file: File) : RecordingWriter {
 
     private val output = BufferedOutputStream(FileOutputStream(file))
     private var dataBytes = 0L
+    private var heardSound = false
     private var finished = false
 
     init {
@@ -38,7 +39,10 @@ internal class WavWriter(private val file: File) : RecordingWriter {
     override fun write(samples: ShortArray) {
         if (finished) return
         val bytes = ByteBuffer.allocate(samples.size * 2).order(ByteOrder.LITTLE_ENDIAN)
-        samples.forEach { bytes.putShort(it) }
+        samples.forEach {
+            bytes.putShort(it)
+            if (it != SILENCE) heardSound = true
+        }
         output.write(bytes.array())
         dataBytes += samples.size * 2
     }
@@ -48,7 +52,8 @@ internal class WavWriter(private val file: File) : RecordingWriter {
         if (finished) return file.takeIf { it.exists() }?.absolutePath
         finished = true
         output.close()
-        if (dataBytes == 0L) {
+        // Si el teléfono bloqueó el micrófono toda la llamada, no guardamos un archivo mudo
+        if (dataBytes == 0L || !heardSound) {
             file.delete()
             return null
         }
@@ -80,5 +85,6 @@ internal class WavWriter(private val file: File) : RecordingWriter {
         const val HEADER_SIZE = 44
         const val CHANNELS = 1
         const val BITS = 16
+        const val SILENCE: Short = 0
     }
 }
