@@ -1,0 +1,126 @@
+<!doctype html>
+<!--
+  Traduya: recibe llamadas por internet (WebRTC con PeerJS).
+  Corre dentro de un WebView oculto. El audio de la otra persona se suena por el altavoz
+  y, a la vez, se convierte en PCM de 16 kHz y se entrega a Kotlin (Traduya.onAudio) para traducirlo.
+-->
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<script src="peerjs.min.js"></script>
+<script>
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+];
+
+const myId = new URLSearchParams(location.search).get('id');
+let peer = null, incoming = null, current = null, localStream = null;
+let audioContext = null, processor = null, remoteAudio = null, ending = false;
+
+function connect() {
+  peer = new Peer(myId, { config: { iceServers: ICE_SERVERS }, debug: 1 });
+  peer.on('open', id => Traduya.onReady(id));
+  peer.on('disconnected', () => setTimeout(() => { try { peer.reconnect(); } catch (e) {} }, 2000));
+  peer.on('error', e => {
+    Traduya.onError(e.type || 'unknown');
+    // El servidor aún recuerda nuestra sesión anterior: reintentamos en unos segundos
+    if (e.type === 'unavailable-id' || e.type === 'network' || e.type === 'server-error') {
+      setTimeout(() => { peer.destroy(); connect(); }, 5000);
+    }
+  });
+  peer.on('call', call => {
+    if (current || incoming) { call.close(); return; }
+    incoming = call;
+    call.on('close', () => { if (incoming === call) { incoming = null; Traduya.onEnded(); } });
+    Traduya.onIncoming(call.peer);
+  });
+}
+
+async function answer() {
+  if (!incoming) return;
+  current = incoming;
+  incoming = null;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+  } catch (e) {
+    Traduya.onError('microphone');
+  }
+  current.answer(localStream || undefined);
+  current.on('stream', onRemoteStream);
+  current.on('close', end);
+  current.on('error', end);
+  const pc = current.peerConnection;
+  if (pc) pc.addEventListener('connectionstatechange', () => {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') end();
+  });
+}
+
+function onRemoteStream(stream) {
+  if (audioContext) return; // 'stream' puede llegar dos veces
+  // Chrome necesita reproducir el stream en un elemento de audio para que el AudioContext reciba datos
+  remoteAudio = new Audio();
+  remoteAudio.srcObject = stream;
+  remoteAudio.play().catch(() => {});
+
+  audioContext = new AudioContext({ sampleRate: 16000 });
+  audioContext.resume();
+  const source = audioContext.createMediaStreamSource(stream);
+  processor = audioContext.createScriptProcessor(2048, 1, 1);
+  processor.onaudioprocess = e => {
+    const input = e.inputBuffer.getChannelData(0);
+    const pcm = new Int16Array(input.length);
+    for (let i = 0; i < input.length; i++) {
+      const s = Math.max(-1, Math.min(1, input[i]));
+      pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    Traduya.onAudio(toBase64(pcm.buffer));
+  };
+  source.connect(processor);
+  processor.connect(audioContext.destination); // el procesador solo corre si está conectado
+  Traduya.onConnected();
+}
+
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function reject() {
+  if (incoming) { incoming.close(); incoming = null; }
+  Traduya.onEnded();
+}
+
+function hangUp() { end(); }
+
+function end() {
+  if (ending) return;
+  ending = true;
+  try { if (current) current.close(); } catch (e) {}
+  current = null;
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  localStream = null;
+  if (processor) { processor.disconnect(); processor = null; }
+  if (audioContext) { audioContext.close(); audioContext = null; }
+  if (remoteAudio) { remoteAudio.srcObject = null; remoteAudio = null; }
+  Traduya.onEnded();
+  ending = false;
+}
+
+function setMuted(muted) {
+  if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = !muted; });
+}
+
+connect();
+</script>
+</body>
+</html>
