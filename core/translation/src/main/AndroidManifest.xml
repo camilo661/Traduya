@@ -1,13 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Solo para descargar los paquetes de idioma; la traducción funciona sin internet -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Necesario en Android 11+ para encontrar el servicio de reconocimiento de voz -->
-    <queries>
-        <intent>
-            <action android:name="android.speech.RecognitionService" />
-        </intent>
-    </queries>
 </manifest>
