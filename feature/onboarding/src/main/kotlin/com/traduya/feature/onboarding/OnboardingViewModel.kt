@@ -20,7 +20,7 @@ data class OnboardingUiState(
     val packsStatus: LanguagePackStatus = LanguagePackStatus.Missing,
 ) {
     val canContinue: Boolean
-        get() = permissionsGranted && isDefaultDialer && packsStatus == LanguagePackStatus.Ready
+        get() = permissionsGranted && packsStatus == LanguagePackStatus.Ready
 }
 
 @HiltViewModel

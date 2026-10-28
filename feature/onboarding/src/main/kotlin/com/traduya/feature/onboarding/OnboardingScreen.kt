@@ -111,7 +111,7 @@ internal fun OnboardingScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Llama a quien quieras y lee en español, en tiempo real, lo que te dicen en inglés o chino.",
+            text = "Recibe llamadas y lee en español, en tiempo real, lo que te dicen en inglés o chino.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -131,8 +131,8 @@ internal fun OnboardingScreen(
             SetupStep(
                 number = 2,
                 icon = Icons.Rounded.PhoneInTalk,
-                title = "App de teléfono",
-                description = "Traduya reemplaza a tu app de llamadas para poder traducirlas.",
+                title = "App de teléfono (opcional)",
+                description = "Para hacer tus llamadas normales desde Traduya. No es necesario para traducir.",
                 done = uiState.isDefaultDialer,
                 actionLabel = "Activar",
                 onAction = onRequestDefaultDialer,
@@ -166,7 +166,7 @@ internal fun OnboardingScreen(
         }
         if (!uiState.canContinue) {
             Text(
-                text = "Completa los tres pasos para continuar",
+                text = "Completa los pasos 1 y 3 para continuar",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
