@@ -10,5 +10,6 @@ interface SettingsRepository {
     suspend fun setLanguagePreference(preference: CallLanguagePreference)
     suspend fun setAutoTranslate(enabled: Boolean)
     suspend fun setAutoSpeaker(enabled: Boolean)
+    suspend fun setRecordCalls(enabled: Boolean)
     suspend fun setOnboardingCompleted(completed: Boolean)
 }

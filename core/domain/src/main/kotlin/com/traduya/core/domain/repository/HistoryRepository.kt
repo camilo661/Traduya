@@ -13,8 +13,14 @@ interface HistoryRepository {
 
     /** Crea el registro de la llamada y devuelve su id. */
     suspend fun startCall(number: String, direction: CallDirection, startedAtMillis: Long): Long
-    suspend fun finishCall(callId: Long, durationSeconds: Long, detectedLanguage: Language?)
+    suspend fun finishCall(
+        callId: Long,
+        durationSeconds: Long,
+        detectedLanguage: Language?,
+        recordingPath: String?,
+    )
     suspend fun addLine(line: TranscriptLine)
+    /** Borra la llamada, su transcripción y su grabación. */
     suspend fun deleteCall(callId: Long)
     suspend fun clearAll()
 }
