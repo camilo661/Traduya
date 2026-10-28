@@ -54,6 +54,7 @@ import com.traduya.core.telecom.DialerRole
 @Composable
 fun DialerRoute(
     initialNumber: String?,
+    onOpenSettings: () -> Unit,
     viewModel: DialerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -65,6 +66,7 @@ fun DialerRoute(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         isDefaultDialer = DialerRole.isDefault(context)
+        viewModel.refreshLanguagePacks()
     }
     val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefaultDialer = DialerRole.isDefault(context)
@@ -79,6 +81,7 @@ fun DialerRoute(
         onCall = viewModel::call,
         onMakeDefault = { roleLauncher.launch(DialerRole.requestIntent(context)) },
         onDismissError = viewModel::dismissError,
+        onOpenSettings = onOpenSettings,
     )
 }
 
@@ -92,6 +95,7 @@ internal fun DialerScreen(
     onCall: () -> Unit,
     onMakeDefault: () -> Unit,
     onDismissError: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -114,6 +118,13 @@ internal fun DialerScreen(
                 text = "Traduya aún no es tu app de teléfono. Actívala para traducir tus llamadas.",
                 actionLabel = "Activar",
                 onAction = onMakeDefault,
+            )
+        }
+        AnimatedVisibility(visible = isDefaultDialer && uiState.languagePacksMissing) {
+            InfoBanner(
+                text = "Faltan los idiomas para traducir. Descárgalos una vez y funcionan sin internet.",
+                actionLabel = "Descargar",
+                onAction = onOpenSettings,
             )
         }
         AnimatedVisibility(visible = uiState.errorMessage != null) {

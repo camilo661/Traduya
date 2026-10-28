@@ -64,7 +64,12 @@ fun TraduyaMainScaffold(dialNumber: String?) {
             startDestination = Routes.DIALER,
             modifier = Modifier.padding(padding),
         ) {
-            composable(Routes.DIALER) { DialerRoute(initialNumber = dialNumber) }
+            composable(Routes.DIALER) {
+                DialerRoute(
+                    initialNumber = dialNumber,
+                    onOpenSettings = { navController.navigateToTopLevel(TopLevelDestination.SETTINGS) },
+                )
+            }
             composable(Routes.HISTORY) {
                 HistoryRoute(onOpenCall = { navController.navigate(Routes.callDetail(it)) })
             }
