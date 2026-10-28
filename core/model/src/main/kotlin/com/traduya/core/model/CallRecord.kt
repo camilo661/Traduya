@@ -9,4 +9,5 @@ data class CallRecord(
     val durationSeconds: Long,
     val detectedLanguage: Language?,
     val lineCount: Int,
+    val recordingPath: String? = null,
 )
