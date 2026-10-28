@@ -180,7 +180,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLogo(size = 40.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.1.0", style = MaterialTheme.typography.labelLarge)
+            Text("Traduya 1.1.1", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
