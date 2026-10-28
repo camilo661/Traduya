@@ -3,8 +3,9 @@ package com.traduya.feature.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.traduya.core.domain.repository.SettingsRepository
-import com.traduya.core.domain.translation.TranslationModels
+import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.model.Language
+import com.traduya.core.model.LanguagePackStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,20 +14,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class ModelsStatus { PENDING, DOWNLOADING, READY, FAILED }
-
 data class OnboardingUiState(
     val permissionsGranted: Boolean = false,
     val isDefaultDialer: Boolean = false,
-    val modelsStatus: ModelsStatus = ModelsStatus.PENDING,
+    val packsStatus: LanguagePackStatus = LanguagePackStatus.Missing,
 ) {
-    val canContinue: Boolean get() = permissionsGranted && isDefaultDialer
+    val canContinue: Boolean
+        get() = permissionsGranted && isDefaultDialer && packsStatus == LanguagePackStatus.Ready
 }
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val translationModels: TranslationModels,
+    private val languagePacks: LanguagePacks,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -34,9 +34,8 @@ class OnboardingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val downloaded = runCatching { translationModels.downloadedLanguages() }.getOrDefault(emptySet())
-            if (downloaded.containsAll(Language.entries)) {
-                _uiState.update { it.copy(modelsStatus = ModelsStatus.READY) }
+            if (languagePacks.installed().containsAll(Language.entries)) {
+                _uiState.update { it.copy(packsStatus = LanguagePackStatus.Ready) }
             }
         }
     }
@@ -45,13 +44,22 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(permissionsGranted = permissionsGranted, isDefaultDialer = isDefaultDialer) }
     }
 
-    fun downloadModels() {
-        if (_uiState.value.modelsStatus == ModelsStatus.DOWNLOADING) return
-        _uiState.update { it.copy(modelsStatus = ModelsStatus.DOWNLOADING) }
+    /** Descarga los tres idiomas uno detrás de otro, mostrando el progreso total. */
+    fun downloadPacks() {
+        if (_uiState.value.packsStatus is LanguagePackStatus.Downloading) return
+        _uiState.update { it.copy(packsStatus = LanguagePackStatus.Downloading(0f)) }
         viewModelScope.launch {
-            val result = runCatching { Language.entries.forEach { translationModels.download(it) } }
+            val result = runCatching {
+                val pending = Language.entries - languagePacks.installed()
+                pending.forEachIndexed { index, language ->
+                    languagePacks.install(language).collect { progress ->
+                        val total = (index + progress) / pending.size
+                        _uiState.update { it.copy(packsStatus = LanguagePackStatus.Downloading(total)) }
+                    }
+                }
+            }
             _uiState.update {
-                it.copy(modelsStatus = if (result.isSuccess) ModelsStatus.READY else ModelsStatus.FAILED)
+                it.copy(packsStatus = if (result.isSuccess) LanguagePackStatus.Ready else LanguagePackStatus.Failed)
             }
         }
     }

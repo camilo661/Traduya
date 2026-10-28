@@ -44,6 +44,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.component.TraduyaLogo
+import com.traduya.core.model.LanguagePackStatus
 import com.traduya.core.telecom.CallPermissions
 import com.traduya.core.telecom.DialerRole
 
@@ -74,7 +75,7 @@ fun OnboardingRoute(
         uiState = uiState,
         onRequestPermissions = { permissionLauncher.launch(CallPermissions.required.toTypedArray()) },
         onRequestDefaultDialer = { roleLauncher.launch(DialerRole.requestIntent(context)) },
-        onDownloadModels = viewModel::downloadModels,
+        onDownloadPacks = viewModel::downloadPacks,
         onContinue = {
             viewModel.finish()
             onFinished()
@@ -87,7 +88,7 @@ internal fun OnboardingScreen(
     uiState: OnboardingUiState,
     onRequestPermissions: () -> Unit,
     onRequestDefaultDialer: () -> Unit,
-    onDownloadModels: () -> Unit,
+    onDownloadPacks: () -> Unit,
     onContinue: () -> Unit,
 ) {
     Column(
@@ -139,15 +140,17 @@ internal fun OnboardingScreen(
             SetupStep(
                 number = 3,
                 icon = Icons.Rounded.CloudDownload,
-                title = "Idiomas (opcional)",
-                description = when (uiState.modelsStatus) {
-                    ModelsStatus.FAILED -> "No se pudo descargar. Revisa tu conexión e inténtalo de nuevo."
-                    else -> "Descarga español, inglés y chino (≈ 90 MB) para traducir sin internet."
+                title = "Idiomas",
+                description = when (val status = uiState.packsStatus) {
+                    LanguagePackStatus.Failed -> "No se pudo descargar. Revisa tu conexión e inténtalo de nuevo."
+                    is LanguagePackStatus.Downloading -> "Descargando… ${(status.progress * 100).toInt()} %"
+                    else -> "Voz y traducción de español, inglés y chino (≈ 200 MB). Usa Wi-Fi."
                 },
-                done = uiState.modelsStatus == ModelsStatus.READY,
-                loading = uiState.modelsStatus == ModelsStatus.DOWNLOADING,
-                actionLabel = if (uiState.modelsStatus == ModelsStatus.FAILED) "Reintentar" else "Descargar",
-                onAction = onDownloadModels,
+                done = uiState.packsStatus == LanguagePackStatus.Ready,
+                loading = uiState.packsStatus is LanguagePackStatus.Downloading,
+                progress = (uiState.packsStatus as? LanguagePackStatus.Downloading)?.progress,
+                actionLabel = if (uiState.packsStatus == LanguagePackStatus.Failed) "Reintentar" else "Descargar",
+                onAction = onDownloadPacks,
             )
         }
 
@@ -163,7 +166,7 @@ internal fun OnboardingScreen(
         }
         if (!uiState.canContinue) {
             Text(
-                text = "Completa los pasos 1 y 2 para continuar",
+                text = "Completa los tres pasos para continuar",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
@@ -182,6 +185,7 @@ private fun SetupStep(
     actionLabel: String,
     onAction: () -> Unit,
     loading: Boolean = false,
+    progress: Float? = null,
 ) {
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -223,6 +227,12 @@ private fun SetupStep(
                     contentDescription = "Listo",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp),
+                )
+
+                loading && progress != null -> CircularProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 3.dp,
                 )
 
                 loading -> CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
