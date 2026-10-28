@@ -37,7 +37,8 @@ import com.traduya.core.designsystem.theme.TraduyaGradients
 import com.traduya.feature.incall.components.CallControls
 import com.traduya.feature.incall.components.CallHeader
 import com.traduya.feature.incall.components.IncomingCallActions
-import com.traduya.feature.incall.components.LiveTranscript
+import com.traduya.feature.incall.components.KaraokeTranscript
+import com.traduya.feature.incall.components.MicBlockedBanner
 import com.traduya.feature.incall.components.TranslationStatusPill
 import kotlinx.coroutines.delay
 
@@ -99,6 +100,8 @@ internal fun InCallScreen(
                 CallHeader(uiState = uiState, compact = compact)
             }
 
+            if (uiState.isActive && uiState.micBlocked) MicBlockedBanner()
+
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -106,9 +109,9 @@ internal fun InCallScreen(
                     .padding(vertical = 12.dp),
             ) {
                 if (uiState.isActive || uiState.lines.isNotEmpty()) {
-                    LiveTranscript(
+                    KaraokeTranscript(
                         lines = uiState.lines,
-                        partialText = uiState.partialText,
+                        liveText = uiState.liveText,
                         translationEnabled = uiState.translationEnabled,
                     )
                 }
