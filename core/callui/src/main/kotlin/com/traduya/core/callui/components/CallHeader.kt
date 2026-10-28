@@ -1,4 +1,4 @@
-package com.traduya.feature.incall.components
+package com.traduya.core.callui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +20,7 @@ import com.traduya.core.designsystem.component.ContactAvatar
 import com.traduya.core.designsystem.util.formatElapsed
 import com.traduya.core.designsystem.util.formatPhoneNumber
 import com.traduya.core.model.CallStatus
-import com.traduya.feature.incall.InCallUiState
+import com.traduya.core.callui.CallUiState
 
 private val avatarBackground = Brush.linearGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.12f)))
 
@@ -29,7 +29,7 @@ private val avatarBackground = Brush.linearGradient(listOf(Color.White.copy(alph
  * compacta durante la llamada para dejar espacio a la traducción.
  */
 @Composable
-internal fun CallHeader(uiState: InCallUiState, compact: Boolean) {
+fun CallHeader(uiState: CallUiState, compact: Boolean) {
     val title = formatPhoneNumber(uiState.callerLabel)
     if (compact) {
         Row(
@@ -81,7 +81,7 @@ internal fun CallHeader(uiState: InCallUiState, compact: Boolean) {
     }
 }
 
-private fun statusText(uiState: InCallUiState): String = when (uiState.status) {
+private fun statusText(uiState: CallUiState): String = when (uiState.status) {
     CallStatus.DIALING -> "Llamando…"
     CallStatus.RINGING -> "Llamada entrante"
     CallStatus.ACTIVE -> formatElapsed(uiState.elapsedSeconds)

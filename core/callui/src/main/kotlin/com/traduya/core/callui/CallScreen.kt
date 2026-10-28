@@ -1,4 +1,4 @@
-package com.traduya.feature.incall
+package com.traduya.core.callui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
@@ -19,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,59 +27,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.component.CallActionButton
 import com.traduya.core.designsystem.component.DialPad
 import com.traduya.core.designsystem.theme.HangUpRed
 import com.traduya.core.designsystem.theme.TraduyaGradients
-import com.traduya.feature.incall.components.CallControls
-import com.traduya.feature.incall.components.CallHeader
-import com.traduya.feature.incall.components.IncomingCallActions
-import com.traduya.feature.incall.components.KaraokeTranscript
-import com.traduya.feature.incall.components.MicBlockedBanner
-import com.traduya.feature.incall.components.TranslationStatusPill
-import kotlinx.coroutines.delay
-
-private const val CLOSE_DELAY_MILLIS = 1_500L
-
-@Composable
-fun InCallRoute(
-    onFinished: () -> Unit,
-    viewModel: InCallViewModel = hiltViewModel(),
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(uiState.hasEnded) {
-        if (uiState.hasEnded) {
-            delay(CLOSE_DELAY_MILLIS)
-            onFinished()
-        }
-    }
-
-    InCallScreen(
-        uiState = uiState,
-        onAnswer = viewModel::answer,
-        onHangUp = viewModel::hangUp,
-        onToggleMute = viewModel::toggleMute,
-        onToggleSpeaker = viewModel::toggleSpeaker,
-        onToggleTranslation = viewModel::toggleTranslation,
-        onDtmf = viewModel::sendDtmf,
-    )
-}
+import com.traduya.core.callui.components.CallControls
+import com.traduya.core.callui.components.CallHeader
+import com.traduya.core.callui.components.IncomingCallActions
+import com.traduya.core.callui.components.KaraokeTranscript
+import com.traduya.core.callui.components.MicBlockedBanner
+import com.traduya.core.callui.components.TranslationStatusPill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun InCallScreen(
-    uiState: InCallUiState,
+fun CallScreen(
+    uiState: CallUiState,
     onAnswer: () -> Unit,
     onHangUp: () -> Unit,
     onToggleMute: () -> Unit,
     onToggleSpeaker: () -> Unit,
     onToggleTranslation: () -> Unit,
     onDtmf: (Char) -> Unit,
+    showKeypad: Boolean = true,
 ) {
-    var showKeypad by remember { mutableStateOf(false) }
+    var keypadOpen by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -133,7 +103,7 @@ internal fun InCallScreen(
                         onToggleMute = onToggleMute,
                         onToggleSpeaker = onToggleSpeaker,
                         onToggleTranslation = onToggleTranslation,
-                        onShowKeypad = { showKeypad = true },
+                        onShowKeypad = if (showKeypad) ({ keypadOpen = true }) else null,
                     )
                     Spacer(Modifier.height(24.dp))
                     CallActionButton(
@@ -149,8 +119,8 @@ internal fun InCallScreen(
         }
     }
 
-    if (showKeypad) {
-        ModalBottomSheet(onDismissRequest = { showKeypad = false }) {
+    if (keypadOpen) {
+        ModalBottomSheet(onDismissRequest = { keypadOpen = false }) {
             Column(
                 modifier = Modifier.padding(start = 32.dp, end = 32.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

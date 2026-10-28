@@ -1,11 +1,11 @@
-package com.traduya.feature.incall
+package com.traduya.core.callui
 
 import com.traduya.core.model.CallStatus
 import com.traduya.core.model.Language
 import com.traduya.core.model.TranscriptLine
 import com.traduya.core.model.TranslationStatus
 
-data class InCallUiState(
+data class CallUiState(
     val callerLabel: String = "",
     val number: String = "",
     val status: CallStatus = CallStatus.DIALING,

@@ -1,4 +1,4 @@
-package com.traduya.feature.incall.components
+package com.traduya.core.callui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -20,18 +20,18 @@ import com.traduya.core.designsystem.component.CallActionButton
 import com.traduya.core.designsystem.theme.CallGreen
 import com.traduya.core.designsystem.theme.HangUpRed
 import com.traduya.core.designsystem.theme.SkyBlueDeep
-import com.traduya.feature.incall.InCallUiState
+import com.traduya.core.callui.CallUiState
 
 private val activeContainer = Color.White
 private val inactiveContainer = Color.White.copy(alpha = 0.16f)
 
 @Composable
-internal fun CallControls(
-    uiState: InCallUiState,
+fun CallControls(
+    uiState: CallUiState,
     onToggleMute: () -> Unit,
     onToggleSpeaker: () -> Unit,
     onToggleTranslation: () -> Unit,
-    onShowKeypad: () -> Unit,
+    onShowKeypad: (() -> Unit)?,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -55,12 +55,14 @@ internal fun CallControls(
             label = "Traducir",
             onClick = onToggleTranslation,
         )
-        ToggleButton(
-            checked = false,
-            icon = Icons.Rounded.Dialpad,
-            label = "Teclado",
-            onClick = onShowKeypad,
-        )
+        if (onShowKeypad != null) {
+            ToggleButton(
+                checked = false,
+                icon = Icons.Rounded.Dialpad,
+                label = "Teclado",
+                onClick = onShowKeypad,
+            )
+        }
     }
 }
 
@@ -81,7 +83,7 @@ private fun ToggleButton(
 }
 
 @Composable
-internal fun IncomingCallActions(onAnswer: () -> Unit, onReject: () -> Unit) {
+fun IncomingCallActions(onAnswer: () -> Unit, onReject: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

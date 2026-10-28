@@ -1,4 +1,4 @@
-package com.traduya.feature.incall.components
+package com.traduya.core.callui.components
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 
 /** Aviso cuando el teléfono no deja que Traduya escuche durante la llamada. */
 @Composable
-internal fun MicBlockedBanner() {
+fun MicBlockedBanner() {
     Surface(
         color = Color(0xFFB91C1C).copy(alpha = 0.9f),
         shape = MaterialTheme.shapes.medium,

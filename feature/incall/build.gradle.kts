@@ -13,6 +13,7 @@ android {
 
 dependencies {
     implementation(projects.core.designsystem)
+    implementation(projects.core.callui)
     implementation(projects.core.domain)
     implementation(projects.core.telecom)
 

@@ -1,4 +1,4 @@
-package com.traduya.feature.incall.components
+package com.traduya.core.callui.components
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -32,11 +32,11 @@ import androidx.compose.ui.unit.dp
 import com.traduya.core.designsystem.theme.CallGreen
 import com.traduya.core.designsystem.theme.HangUpRed
 import com.traduya.core.model.TranslationStatus
-import com.traduya.feature.incall.InCallUiState
+import com.traduya.core.callui.CallUiState
 
 /** Barra superior: estado de la traducción, medidor de voz y aviso de grabación. */
 @Composable
-internal fun TranslationStatusPill(uiState: InCallUiState) {
+fun TranslationStatusPill(uiState: CallUiState) {
     val text = when {
         !uiState.isActive -> "Traduya"
         !uiState.translationEnabled -> "Traducción en pausa"

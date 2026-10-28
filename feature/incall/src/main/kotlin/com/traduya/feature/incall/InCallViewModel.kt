@@ -2,6 +2,7 @@ package com.traduya.feature.incall
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.traduya.core.callui.CallUiState
 import com.traduya.core.domain.repository.HistoryRepository
 import com.traduya.core.domain.translation.CallTranslationSession
 import com.traduya.core.model.ActiveCall
@@ -49,7 +50,7 @@ class InCallViewModel @Inject constructor(
         }
     }
 
-    val uiState: StateFlow<InCallUiState> = combine(
+    val uiState: StateFlow<CallUiState> = combine(
         callManager.currentCall,
         session.state,
         transcript,
@@ -58,7 +59,7 @@ class InCallViewModel @Inject constructor(
         if (call != null) lastCall = call
         val shown = call ?: lastCall
         val ended = call == null || call.status == CallStatus.DISCONNECTED
-        InCallUiState(
+        CallUiState(
             callerLabel = shown?.label.orEmpty(),
             number = shown?.number.orEmpty(),
             status = if (ended) CallStatus.DISCONNECTED else call!!.status,
@@ -76,7 +77,7 @@ class InCallViewModel @Inject constructor(
             lines = lines,
             hasEnded = ended,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InCallUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CallUiState())
 
     fun answer() = callManager.answer()
 

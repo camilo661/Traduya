@@ -1,4 +1,4 @@
-package com.traduya.feature.incall.components
+package com.traduya.core.callui.components
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -48,7 +48,7 @@ private const val HIGHLIGHTED_WORDS = 2
  * se iluminan en azul; las frases anteriores suben y se atenúan.
  */
 @Composable
-internal fun KaraokeTranscript(
+fun KaraokeTranscript(
     lines: List<TranscriptLine>,
     liveText: String,
     translationEnabled: Boolean,
