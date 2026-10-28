@@ -87,6 +87,7 @@ internal fun HistoryDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item { CallSummary(call) }
+                call.recordingPath?.let { path -> item { RecordingPlayer(path) } }
                 if (uiState.lines.isEmpty()) {
                     item {
                         EmptyState(
