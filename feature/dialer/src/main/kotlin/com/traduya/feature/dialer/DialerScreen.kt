@@ -82,6 +82,7 @@ fun DialerRoute(
         onMakeDefault = { roleLauncher.launch(DialerRole.requestIntent(context)) },
         onDismissError = viewModel::dismissError,
         onOpenSettings = onOpenSettings,
+        onReturnToCall = viewModel::returnToCall,
     )
 }
 
@@ -96,6 +97,7 @@ internal fun DialerScreen(
     onMakeDefault: () -> Unit,
     onDismissError: () -> Unit,
     onOpenSettings: () -> Unit,
+    onReturnToCall: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -113,6 +115,9 @@ internal fun DialerScreen(
             TranslationChip(uiState.languagePreference)
         }
 
+        AnimatedVisibility(visible = uiState.ongoingCallLabel != null) {
+            ReturnToCallBanner(label = uiState.ongoingCallLabel.orEmpty(), onClick = onReturnToCall)
+        }
         AnimatedVisibility(visible = !isDefaultDialer) {
             InfoBanner(
                 text = "Traduya aún no es tu app de teléfono. Actívala para traducir tus llamadas.",
@@ -204,6 +209,28 @@ private fun TranslationChip(preference: CallLanguagePreference) {
                 text = preference.label,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReturnToCallBanner(label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = CallGreen,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Call, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
+            Text(
+                text = "Llamada en curso con $label · Toca para volver",
+                style = MaterialTheme.typography.titleSmall,
+                color = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.padding(start = 12.dp),
             )
         }
     }

@@ -6,6 +6,7 @@ import com.traduya.core.domain.repository.SettingsRepository
 import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.model.Language
 import com.traduya.core.model.CallLanguagePreference
+import com.traduya.core.model.CallStatus
 import com.traduya.core.telecom.CallManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ data class DialerUiState(
     val languagePreference: CallLanguagePreference = CallLanguagePreference.AUTOMATIC,
     val errorMessage: String? = null,
     val languagePacksMissing: Boolean = false,
+    val ongoingCallLabel: String? = null,
 )
 
 @HiltViewModel
@@ -40,12 +42,14 @@ class DialerViewModel @Inject constructor(
         error,
         settingsRepository.settings,
         packsMissing,
-    ) { number, error, settings, packsMissing ->
+        callManager.currentCall,
+    ) { number, error, settings, packsMissing, call ->
         DialerUiState(
             number = number,
             languagePreference = settings.languagePreference,
             errorMessage = error,
             languagePacksMissing = packsMissing,
+            ongoingCallLabel = call?.takeIf { it.status != CallStatus.DISCONNECTED }?.label,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DialerUiState())
 
@@ -78,6 +82,8 @@ class DialerViewModel @Inject constructor(
             .onSuccess { error.value = null }
             .onFailure { error.value = it.message ?: "No se pudo iniciar la llamada" }
     }
+
+    fun returnToCall() = callManager.showCallScreen()
 
     fun dismissError() {
         error.value = null
