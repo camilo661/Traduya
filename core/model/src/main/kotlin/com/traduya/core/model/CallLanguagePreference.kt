@@ -22,10 +22,7 @@ enum class CallLanguagePreference(
         fixedLanguage = Language.CHINESE,
     );
 
-    /** Idioma con el que arranca el reconocimiento de voz. */
-    val primaryLanguage: Language get() = fixedLanguage ?: Language.ENGLISH
-
-    /** Idiomas que el reconocedor puede detectar en esta llamada. */
-    val candidateLanguages: List<Language>
-        get() = listOfNotNull(fixedLanguage).ifEmpty { Language.foreignLanguages } + Language.SPANISH
+    /** Idiomas que se escuchan en la llamada para la otra persona. */
+    val foreignCandidates: List<Language>
+        get() = listOfNotNull(fixedLanguage).ifEmpty { Language.foreignLanguages }
 }
