@@ -45,6 +45,7 @@ import com.traduya.core.designsystem.component.SectionCard
 import com.traduya.core.designsystem.component.TraduyaLogo
 import com.traduya.core.model.CallLanguagePreference
 import com.traduya.core.model.Language
+import com.traduya.core.model.LanguagePackStatus
 import com.traduya.core.telecom.DialerRole
 
 @Composable
@@ -64,7 +65,8 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         onLanguagePreference = viewModel::setLanguagePreference,
         onAutoTranslate = viewModel::setAutoTranslate,
         onAutoSpeaker = viewModel::setAutoSpeaker,
-        onDownloadModel = viewModel::downloadModel,
+        onRecordCalls = viewModel::setRecordCalls,
+        onDownloadPack = viewModel::downloadPack,
         onMakeDefault = { roleLauncher.launch(DialerRole.requestIntent(context)) },
     )
 }
@@ -77,7 +79,8 @@ internal fun SettingsScreen(
     onLanguagePreference: (CallLanguagePreference) -> Unit,
     onAutoTranslate: (Boolean) -> Unit,
     onAutoSpeaker: (Boolean) -> Unit,
-    onDownloadModel: (Language) -> Unit,
+    onRecordCalls: (Boolean) -> Unit,
+    onDownloadPack: (Language) -> Unit,
     onMakeDefault: () -> Unit,
 ) {
     val settings = uiState.settings
@@ -128,15 +131,22 @@ internal fun SettingsScreen(
                 checked = settings.autoSpeaker,
                 onCheckedChange = onAutoSpeaker,
             )
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+            SwitchRow(
+                title = "Grabar llamadas",
+                subtitle = "Guarda el audio en el historial. Avisa a la otra persona",
+                checked = settings.recordCalls,
+                onCheckedChange = onRecordCalls,
+            )
         }
 
-        SectionCard(title = "Modelos de traducción") {
+        SectionCard(title = "Idiomas (voz y traducción)") {
             Language.entries.forEachIndexed { index, language ->
                 if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                ModelRow(
+                PackRow(
                     language = language,
-                    state = uiState.models[language] ?: ModelState.MISSING,
-                    onDownload = { onDownloadModel(language) },
+                    status = uiState.packs[language] ?: LanguagePackStatus.Missing,
+                    onDownload = { onDownloadPack(language) },
                 )
             }
         }
@@ -170,7 +180,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLogo(size = 40.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.0.1", style = MaterialTheme.typography.labelLarge)
+            Text("Traduya 1.1.0", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
@@ -204,7 +214,7 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun ModelRow(language: Language, state: ModelState, onDownload: () -> Unit) {
+private fun PackRow(language: Language, status: LanguagePackStatus, onDownload: () -> Unit) {
     Row(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -217,31 +227,39 @@ private fun ModelRow(language: Language, state: ModelState, onDownload: () -> Un
         ) {
             Text(language.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = when (state) {
-                    ModelState.READY -> "Descargado · funciona sin internet"
-                    ModelState.DOWNLOADING -> "Descargando…"
-                    ModelState.FAILED -> "Error al descargar"
-                    ModelState.MISSING -> "Se descargará al primer uso"
+                text = when (status) {
+                    LanguagePackStatus.Ready -> if (language == Language.SPANISH) {
+                        "Listo · reconoce tu voz para no mostrarla"
+                    } else {
+                        "Listo · funciona sin internet"
+                    }
+                    is LanguagePackStatus.Downloading -> "Descargando… ${(status.progress * 100).toInt()} %"
+                    LanguagePackStatus.Failed -> "Error al descargar"
+                    LanguagePackStatus.Missing -> "Necesario para traducir (≈ 70 MB)"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        when (state) {
-            ModelState.READY -> Icon(
+        when (status) {
+            LanguagePackStatus.Ready -> Icon(
                 Icons.Rounded.CheckCircle,
                 contentDescription = "Descargado",
                 tint = MaterialTheme.colorScheme.primary,
             )
 
-            ModelState.DOWNLOADING -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+            is LanguagePackStatus.Downloading -> CircularProgressIndicator(
+                progress = { status.progress },
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.5.dp,
+            )
 
-            ModelState.FAILED -> FilledTonalButton(onClick = onDownload) {
+            LanguagePackStatus.Failed -> FilledTonalButton(onClick = onDownload) {
                 Icon(Icons.Rounded.ErrorOutline, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text("Reintentar", modifier = Modifier.padding(start = 6.dp))
             }
 
-            ModelState.MISSING -> FilledTonalButton(onClick = onDownload) { Text("Descargar") }
+            LanguagePackStatus.Missing -> FilledTonalButton(onClick = onDownload) { Text("Descargar") }
         }
     }
 }
