@@ -7,6 +7,11 @@ y la traducción de lo que dices tú.
 
 ## Funciones
 
+- **Llamada traducida por internet (recomendado)**: compartes tu enlace o código QR, la otra persona lo abre en su
+  navegador (iPhone, Android o computadora, sin instalar nada) y te llama. Su voz llega a Traduya por WebRTC y se
+  traduce al español en vivo. Funciona porque Android no puede bloquear este audio, como sí bloquea el de las llamadas
+  telefónicas.
+
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
@@ -28,10 +33,14 @@ core/data               Room (historial) y DataStore (ajustes)
 core/audio              Captura del micrófono y grabación WAV
 core/translation        Vosk (voz a texto) + ML Kit (traducción) y paquetes de idioma
 core/telecom            InCallService, CallManager, notificaciones y rol de marcador
+core/session            Motor de traducción en vivo de una llamada (audio → IA → historial)
+core/callui             Pantalla de llamada compartida (karaoke, controles)
 core/designsystem       Tema azul claro, logo y componentes compartidos
 feature/onboarding      Bienvenida, permisos y app predeterminada
 feature/dialer          Teclado para marcar
-feature/incall          Pantalla de llamada con traducción en vivo
+feature/incall          Llamadas telefónicas
+feature/internetcall    Llamadas por internet (WebRTC + PeerJS en un WebView) con enlace y QR
+docs/                   Página web para llamar (GitHub Pages): https://camilo661.github.io/Traduya/
 feature/history         Historial y detalle de cada llamada
 feature/settings        Idioma, altavoz automático y modelos
 ```
