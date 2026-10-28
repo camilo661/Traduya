@@ -24,6 +24,7 @@ internal class DataStoreSettingsRepository @Inject constructor(
                 ?: defaults.languagePreference,
             autoTranslate = prefs[Keys.AUTO_TRANSLATE] ?: defaults.autoTranslate,
             autoSpeaker = prefs[Keys.AUTO_SPEAKER] ?: defaults.autoSpeaker,
+            recordCalls = prefs[Keys.RECORD_CALLS] ?: defaults.recordCalls,
             onboardingCompleted = prefs[Keys.ONBOARDING_DONE] ?: defaults.onboardingCompleted,
         )
     }
@@ -40,6 +41,10 @@ internal class DataStoreSettingsRepository @Inject constructor(
         dataStore.edit { it[Keys.AUTO_SPEAKER] = enabled }
     }
 
+    override suspend fun setRecordCalls(enabled: Boolean) {
+        dataStore.edit { it[Keys.RECORD_CALLS] = enabled }
+    }
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_DONE] = completed }
     }
@@ -48,6 +53,7 @@ internal class DataStoreSettingsRepository @Inject constructor(
         val LANGUAGE = stringPreferencesKey("language_preference")
         val AUTO_TRANSLATE = booleanPreferencesKey("auto_translate")
         val AUTO_SPEAKER = booleanPreferencesKey("auto_speaker")
+        val RECORD_CALLS = booleanPreferencesKey("record_calls")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_completed")
     }
 }
