@@ -60,8 +60,14 @@ Requiere JDK 17 o superior y el Android SDK 35. Funciona en Android 10 o superio
 
 ## Limitación importante de Android
 
-Android no permite a apps de terceros grabar directamente el audio de la otra persona en la llamada.
-Por eso Traduya activa el **altavoz** al conectar: así el micrófono capta las dos voces.
-La barra de estado muestra un medidor de voz y, si el sistema entrega silencio, un aviso en rojo.
-En algunos fabricantes el sistema silencia el micrófono para otras apps durante una llamada;
-en esos teléfonos la traducción puede no recibir audio.
+Desde Android 10, el sistema **silencia el micrófono de cualquier app durante una llamada telefónica normal**,
+aunque la app sea la de teléfono predeterminada y aunque tenga activado un servicio de accesibilidad.
+Comprobado en Android 14 con `dumpsys audio`: la captura de Traduya aparece como `silenced:true`
+en las fuentes MIC, VOICE_RECOGNITION, CAMCORDER y UNPROCESSED.
+
+Solo las apps del sistema con el permiso `CAPTURE_AUDIO_OUTPUT` pueden oír una llamada. Por eso los
+traductores de llamadas que funcionan son funciones del propio fabricante (Galaxy AI en Samsung,
+Traducción en tiempo real en Google Pixel).
+
+Traduya detecta este bloqueo, lo avisa en pantalla y no guarda grabaciones vacías. El reconocimiento y la
+traducción funcionan (ver la prueba `LiveTranslationPipelineTest`) cuando el audio llega a la app.
