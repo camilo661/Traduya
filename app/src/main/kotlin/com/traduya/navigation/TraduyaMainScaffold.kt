@@ -10,7 +10,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import android.content.Intent
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,11 +26,13 @@ import com.traduya.feature.dialer.DialerRoute
 import com.traduya.feature.history.detail.HistoryDetailRoute
 import com.traduya.feature.history.detail.HistoryDetailViewModel
 import com.traduya.feature.history.list.HistoryRoute
+import com.traduya.feature.internetcall.InternetCallActivity
 import com.traduya.feature.settings.SettingsRoute
 
 @Composable
 fun TraduyaMainScaffold(dialNumber: String?) {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showBottomBar = TopLevelDestination.entries.any { it.route == currentDestination?.route }
@@ -68,6 +72,9 @@ fun TraduyaMainScaffold(dialNumber: String?) {
                 DialerRoute(
                     initialNumber = dialNumber,
                     onOpenSettings = { navController.navigateToTopLevel(TopLevelDestination.SETTINGS) },
+                    onOpenInternetCall = {
+                        context.startActivity(Intent(context, InternetCallActivity::class.java))
+                    },
                 )
             }
             composable(Routes.HISTORY) {

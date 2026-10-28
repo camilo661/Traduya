@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Info
@@ -55,6 +57,7 @@ import com.traduya.core.telecom.DialerRole
 fun DialerRoute(
     initialNumber: String?,
     onOpenSettings: () -> Unit,
+    onOpenInternetCall: () -> Unit,
     viewModel: DialerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -83,6 +86,7 @@ fun DialerRoute(
         onDismissError = viewModel::dismissError,
         onOpenSettings = onOpenSettings,
         onReturnToCall = viewModel::returnToCall,
+        onOpenInternetCall = onOpenInternetCall,
     )
 }
 
@@ -98,6 +102,7 @@ internal fun DialerScreen(
     onDismissError: () -> Unit,
     onOpenSettings: () -> Unit,
     onReturnToCall: () -> Unit,
+    onOpenInternetCall: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -114,6 +119,8 @@ internal fun DialerScreen(
             TraduyaWordmark(modifier = Modifier.weight(1f))
             TranslationChip(uiState.languagePreference)
         }
+
+        InternetCallCard(onClick = onOpenInternetCall)
 
         AnimatedVisibility(visible = uiState.ongoingCallLabel != null) {
             ReturnToCallBanner(label = uiState.ongoingCallLabel.orEmpty(), onClick = onReturnToCall)
@@ -209,6 +216,54 @@ private fun TranslationChip(preference: CallLanguagePreference) {
                 text = preference.label,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+/** Acceso principal a la traducción: las llamadas por internet sí se pueden escuchar y traducir. */
+@Composable
+private fun InternetCallCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .background(com.traduya.core.designsystem.theme.TraduyaGradients.brand)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Rounded.Translate,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.size(32.dp),
+            )
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp),
+            ) {
+                Text(
+                    text = "Llamada traducida",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = androidx.compose.ui.graphics.Color.White,
+                )
+                Text(
+                    text = "Comparte tu enlace y lee en español lo que te dicen, en vivo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowForward,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color.White,
             )
         }
     }
