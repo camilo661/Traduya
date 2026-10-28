@@ -3,12 +3,14 @@ package com.traduya.core.telecom
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
+import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.telecom.VideoProfile
 import androidx.core.content.ContextCompat
@@ -27,6 +29,7 @@ import javax.inject.Singleton
 @Singleton
 class CallManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val callUiLauncher: CallUiLauncher,
 ) {
     private val _currentCall = MutableStateFlow<ActiveCall?>(null)
     val currentCall: StateFlow<ActiveCall?> = _currentCall.asStateFlow()
@@ -74,12 +77,27 @@ class CallManager @Inject constructor(
 
     // region Acciones del usuario
 
-    /** Inicia una llamada a través del sistema de telefonía de Android. */
+    /**
+     * Inicia una llamada a través del sistema de telefonía de Android y abre nuestra pantalla.
+     *
+     * La pantalla se abre desde aquí, con la app en primer plano, porque algunos fabricantes
+     * (Xiaomi, Samsung…) bloquean que el servicio de llamadas la abra desde segundo plano.
+     */
     @SuppressLint("MissingPermission")
     fun placeCall(number: String): Result<Unit> = runCatching {
         check(hasPermission(Manifest.permission.CALL_PHONE)) { "Falta el permiso para llamar" }
         val telecom = context.getSystemService(TelecomManager::class.java)
-        telecom.placeCall(Uri.fromParts("tel", number, null), Bundle())
+        val extras = Bundle()
+        defaultOutgoingAccount()?.let { extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, it) }
+        telecom.placeCall(Uri.fromParts("tel", number, null), extras)
+        showCallScreen()
+    }
+
+    /** Abre (o trae al frente) la pantalla de la llamada en curso. */
+    fun showCallScreen() {
+        runCatching {
+            context.startActivity(callUiLauncher.inCallIntent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
     }
 
     fun answer() {
@@ -116,14 +134,19 @@ class CallManager @Inject constructor(
         _currentCall.value = primaryCall()?.toActiveCall(isMuted, isSpeakerOn)
     }
 
-    /** Con doble SIM y sin SIM predeterminada, Android nos pide elegir una: usamos la primera. */
-    @SuppressLint("MissingPermission")
+    /** Con doble SIM y sin SIM predeterminada, Android nos pide elegir una. */
     private fun selectDefaultAccount(call: Call) {
-        if (!hasPermission(Manifest.permission.READ_PHONE_STATE)) return
-        val telecom = context.getSystemService(TelecomManager::class.java)
-        val account = telecom.callCapablePhoneAccounts.firstOrNull() ?: return
+        val account = defaultOutgoingAccount() ?: return
         call.phoneAccountSelected(account, false)
     }
+
+    /** La SIM que el usuario eligió para llamar o, si no eligió ninguna, la primera disponible. */
+    @SuppressLint("MissingPermission")
+    private fun defaultOutgoingAccount(): PhoneAccountHandle? = runCatching {
+        if (!hasPermission(Manifest.permission.READ_PHONE_STATE)) return null
+        val telecom = context.getSystemService(TelecomManager::class.java)
+        telecom.getDefaultOutgoingPhoneAccount("tel") ?: telecom.callCapablePhoneAccounts.firstOrNull()
+    }.getOrNull()
 
     private fun hasPermission(permission: String) =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
