@@ -28,8 +28,8 @@ internal fun MicBlockedBanner() {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.MicOff, contentDescription = null, tint = Color.White)
             Text(
-                text = "Tu teléfono no deja que Traduya escuche esta llamada. " +
-                    "Mantén esta pantalla abierta y el altavoz activo.",
+                text = "Android está bloqueando el micrófono de Traduya en esta llamada, " +
+                    "así que no puede oír a la otra persona ni traducirla.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White,
                 modifier = Modifier.padding(start = 12.dp),
