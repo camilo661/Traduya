@@ -1,13 +1,11 @@
 package com.traduya.core.translation.di
 
-import com.traduya.core.domain.translation.LanguageDetector
+import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.domain.translation.SpeechTranscriber
 import com.traduya.core.domain.translation.TranslationEngine
-import com.traduya.core.domain.translation.TranslationModels
-import com.traduya.core.translation.mlkit.MlKitLanguageDetector
+import com.traduya.core.translation.LanguagePacksImpl
 import com.traduya.core.translation.mlkit.MlKitTranslationEngine
-import com.traduya.core.translation.mlkit.MlKitTranslationModels
-import com.traduya.core.translation.speech.AndroidSpeechTranscriber
+import com.traduya.core.translation.vosk.VoskSpeechTranscriber
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -21,11 +19,8 @@ internal abstract class TranslationModule {
     abstract fun bindTranslationEngine(impl: MlKitTranslationEngine): TranslationEngine
 
     @Binds
-    abstract fun bindLanguageDetector(impl: MlKitLanguageDetector): LanguageDetector
+    abstract fun bindSpeechTranscriber(impl: VoskSpeechTranscriber): SpeechTranscriber
 
     @Binds
-    abstract fun bindTranslationModels(impl: MlKitTranslationModels): TranslationModels
-
-    @Binds
-    abstract fun bindSpeechTranscriber(impl: AndroidSpeechTranscriber): SpeechTranscriber
+    abstract fun bindLanguagePacks(impl: LanguagePacksImpl): LanguagePacks
 }
