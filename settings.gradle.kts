@@ -28,6 +28,8 @@ include(":core:designsystem")
 include(":core:telecom")
 include(":core:translation")
 include(":core:audio")
+include(":core:session")
+include(":core:callui")
 
 // Funcionalidades: cada pantalla vive en su propio módulo
 include(":feature:onboarding")
@@ -35,3 +37,4 @@ include(":feature:dialer")
 include(":feature:incall")
 include(":feature:history")
 include(":feature:settings")
+include(":feature:internetcall")
