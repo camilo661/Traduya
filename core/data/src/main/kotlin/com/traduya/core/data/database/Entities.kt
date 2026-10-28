@@ -15,6 +15,7 @@ data class CallEntity(
     val startedAt: Long,
     val durationSeconds: Long = 0,
     val detectedLanguage: String? = null,
+    val recordingPath: String? = null,
 )
 
 @Entity(

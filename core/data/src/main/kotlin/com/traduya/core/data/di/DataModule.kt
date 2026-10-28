@@ -37,7 +37,9 @@ internal abstract class DataModule {
         @Provides
         @Singleton
         fun provideDatabase(@ApplicationContext context: Context): TraduyaDatabase =
-            Room.databaseBuilder(context, TraduyaDatabase::class.java, TraduyaDatabase.NAME).build()
+            Room.databaseBuilder(context, TraduyaDatabase::class.java, TraduyaDatabase.NAME)
+                .addMigrations(TraduyaDatabase.MIGRATION_1_2)
+                .build()
 
         @Provides
         fun provideCallDao(database: TraduyaDatabase): CallDao = database.callDao()

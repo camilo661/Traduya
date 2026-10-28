@@ -33,8 +33,19 @@ interface CallDao {
     @Insert
     suspend fun insertLine(line: TranscriptLineEntity)
 
-    @Query("UPDATE calls SET durationSeconds = :durationSeconds, detectedLanguage = :language WHERE id = :callId")
-    suspend fun finishCall(callId: Long, durationSeconds: Long, language: String?)
+    @Query(
+        """
+        UPDATE calls SET durationSeconds = :durationSeconds, detectedLanguage = :language,
+        recordingPath = :recordingPath WHERE id = :callId
+        """,
+    )
+    suspend fun finishCall(callId: Long, durationSeconds: Long, language: String?, recordingPath: String?)
+
+    @Query("SELECT recordingPath FROM calls WHERE id = :callId")
+    suspend fun recordingPath(callId: Long): String?
+
+    @Query("SELECT recordingPath FROM calls WHERE recordingPath IS NOT NULL")
+    suspend fun allRecordingPaths(): List<String>
 
     @Query("DELETE FROM calls WHERE id = :callId")
     suspend fun deleteCall(callId: Long)

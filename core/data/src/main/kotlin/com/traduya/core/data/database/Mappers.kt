@@ -14,6 +14,7 @@ internal fun CallWithLineCount.toModel() = CallRecord(
     durationSeconds = call.durationSeconds,
     detectedLanguage = call.detectedLanguage?.let(Language::fromCode),
     lineCount = lineCount,
+    recordingPath = call.recordingPath,
 )
 
 internal fun TranscriptLineEntity.toModel() = TranscriptLine(
