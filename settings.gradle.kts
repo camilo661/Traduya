@@ -27,6 +27,7 @@ include(":core:data")
 include(":core:designsystem")
 include(":core:telecom")
 include(":core:translation")
+include(":core:audio")
 
 // Funcionalidades: cada pantalla vive en su propio módulo
 include(":feature:onboarding")
