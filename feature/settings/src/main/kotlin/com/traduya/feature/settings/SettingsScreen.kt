@@ -54,7 +54,10 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     var isDefaultDialer by remember { mutableStateOf(true) }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { isDefaultDialer = DialerRole.isDefault(context) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        isDefaultDialer = DialerRole.isDefault(context)
+        viewModel.refreshCallAudioTap()
+    }
     val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefaultDialer = DialerRole.isDefault(context)
     }
@@ -68,6 +71,9 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         onRecordCalls = viewModel::setRecordCalls,
         onDownloadPack = viewModel::downloadPack,
         onMakeDefault = { roleLauncher.launch(DialerRole.requestIntent(context)) },
+        onInstallShizuku = { ShizukuIntents.install(context) },
+        onOpenShizuku = { ShizukuIntents.open(context) },
+        onAllowShizuku = viewModel::allowCallAudioTap,
     )
 }
 
@@ -82,6 +88,9 @@ internal fun SettingsScreen(
     onRecordCalls: (Boolean) -> Unit,
     onDownloadPack: (Language) -> Unit,
     onMakeDefault: () -> Unit,
+    onInstallShizuku: () -> Unit,
+    onOpenShizuku: () -> Unit,
+    onAllowShizuku: () -> Unit,
 ) {
     val settings = uiState.settings
     Column(
@@ -95,6 +104,13 @@ internal fun SettingsScreen(
             text = "Ajustes",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(start = 8.dp, top = 20.dp),
+        )
+
+        CallAudioTapCard(
+            status = uiState.callAudioTap,
+            onInstall = onInstallShizuku,
+            onOpenShizuku = onOpenShizuku,
+            onAllow = onAllowShizuku,
         )
 
         SectionCard(title = "Idioma de la otra persona") {
@@ -127,7 +143,7 @@ internal fun SettingsScreen(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             SwitchRow(
                 title = "Altavoz automático",
-                subtitle = "Necesario para que Traduya escuche a la otra persona",
+                subtitle = "Solo se usa si Shizuku no está activo",
                 checked = settings.autoSpeaker,
                 onCheckedChange = onAutoSpeaker,
             )
@@ -180,7 +196,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLogo(size = 40.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.2.0", style = MaterialTheme.typography.labelLarge)
+            Text("Traduya 1.3.0", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,

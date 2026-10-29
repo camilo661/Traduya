@@ -2,9 +2,11 @@ package com.traduya.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.traduya.core.domain.audio.CallAudioTap
 import com.traduya.core.domain.repository.SettingsRepository
 import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.model.AppSettings
+import com.traduya.core.model.CallAudioTapStatus
 import com.traduya.core.model.CallLanguagePreference
 import com.traduya.core.model.Language
 import com.traduya.core.model.LanguagePackStatus
@@ -21,18 +23,24 @@ import javax.inject.Inject
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
     val packs: Map<Language, LanguagePackStatus> = Language.entries.associateWith { LanguagePackStatus.Missing },
+    val callAudioTap: CallAudioTapStatus = CallAudioTapStatus.NOT_INSTALLED,
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val languagePacks: LanguagePacks,
+    private val callAudioTap: CallAudioTap,
 ) : ViewModel() {
 
     private val packs = MutableStateFlow(Language.entries.associateWith<Language, LanguagePackStatus> { LanguagePackStatus.Missing })
 
-    val uiState: StateFlow<SettingsUiState> = combine(settingsRepository.settings, packs) { settings, packs ->
-        SettingsUiState(settings, packs)
+    val uiState: StateFlow<SettingsUiState> = combine(
+        settingsRepository.settings,
+        packs,
+        callAudioTap.status,
+    ) { settings, packs, tapStatus ->
+        SettingsUiState(settings, packs, tapStatus)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     init {
@@ -43,6 +51,10 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    fun refreshCallAudioTap() = callAudioTap.refresh()
+
+    fun allowCallAudioTap() = callAudioTap.requestPermission()
 
     fun setLanguagePreference(preference: CallLanguagePreference) {
         viewModelScope.launch { settingsRepository.setLanguagePreference(preference) }
