@@ -30,6 +30,7 @@ include(":core:translation")
 include(":core:audio")
 include(":core:session")
 include(":core:callui")
+include(":core:callcapture")
 
 // Funcionalidades: cada pantalla vive en su propio módulo
 include(":feature:onboarding")
