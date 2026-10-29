@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import javax.inject.Inject
-import kotlin.math.sqrt
 
 /**
  * Lee el micrófono en trozos de 100 ms.
@@ -67,7 +66,7 @@ internal class AndroidAudioCapture @Inject constructor(
                     val samples = buffer.copyOf(read)
                     silentMillis = if (samples.all { it == ZERO }) silentMillis + CHUNK_MILLIS else 0
                     val blocked = silentMillis >= BLOCKED_AFTER_MILLIS
-                    emit(AudioChunk(samples, level(samples), blocked && isLastSource))
+                    emit(AudioChunk(samples, AudioChunk.levelOf(samples), blocked && isLastSource))
                     if (blocked && !isLastSource) break
                 }
             } finally {
@@ -94,19 +93,10 @@ internal class AndroidAudioCapture @Inject constructor(
         ).takeIf { it.state == AudioRecord.STATE_INITIALIZED }
     }.getOrNull()
 
-    /** Volumen RMS normalizado y ampliado para que la voz normal llene el medidor. */
-    private fun level(samples: ShortArray): Float {
-        var sum = 0.0
-        for (sample in samples) sum += sample * sample.toDouble()
-        val rms = sqrt(sum / samples.size) / Short.MAX_VALUE
-        return (rms * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
-    }
-
     private companion object {
         const val CHUNK_MILLIS = 100
         const val CHUNK_SAMPLES = AudioChunk.SAMPLE_RATE * CHUNK_MILLIS / 1000
         const val BLOCKED_AFTER_MILLIS = 3_000
-        const val LEVEL_GAIN = 6.0
         const val ZERO: Short = 0
     }
 }
