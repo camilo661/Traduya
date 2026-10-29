@@ -12,6 +12,9 @@ y la traducción de lo que dices tú.
   traduce al español en vivo. Funciona porque Android no puede bloquear este audio, como sí bloquea el de las llamadas
   telefónicas.
 
+- **Llamadas telefónicas normales con Shizuku**: con la app gratuita [Shizuku](https://shizuku.rikka.app/) activa,
+  Traduya escucha directamente la línea telefónica (solo la voz de la otra persona) y traduce sin altavoz.
+  Ver [Traducir llamadas normales](#traducir-llamadas-normales-shizuku).
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
@@ -31,6 +34,7 @@ core/model              Modelos puros de Kotlin
 core/domain             Contratos (repositorios, motor de traducción) y casos de uso
 core/data               Room (historial) y DataStore (ajustes)
 core/audio              Captura del micrófono y grabación WAV
+core/callcapture        Audio de la línea telefónica vía Shizuku (proceso con uid de shell)
 core/translation        Vosk (voz a texto) + ML Kit (traducción) y paquetes de idioma
 core/telecom            InCallService, CallManager, notificaciones y rol de marcador
 core/session            Motor de traducción en vivo de una llamada (audio → IA → historial)
@@ -49,7 +53,7 @@ Flujo de una llamada:
 
 ```
 Android Telecom → TraduyaInCallService → CallManager (StateFlow)
-      → CallSessionCoordinator → AudioCapture (micrófono, 100 ms)
+      → CallSessionCoordinator → CallAudioTap (línea vía Shizuku) o AudioCapture (micrófono), 100 ms
             ├─ CallRecordingStore (WAV)
             └─ VoskSpeechTranscriber → LanguageArbiter → ML Kit → karaoke en pantalla
       → HistoryRepository (Room)
@@ -67,16 +71,32 @@ Android Telecom → TraduyaInCallService → CallManager (StateFlow)
 
 Requiere JDK 17 o superior y el Android SDK 35. Funciona en Android 10 o superior.
 
-## Limitación importante de Android
+## Traducir llamadas normales (Shizuku)
 
 Desde Android 10, el sistema **silencia el micrófono de cualquier app durante una llamada telefónica normal**,
-aunque la app sea la de teléfono predeterminada y aunque tenga activado un servicio de accesibilidad.
-Comprobado en Android 14 con `dumpsys audio`: la captura de Traduya aparece como `silenced:true`
-en las fuentes MIC, VOICE_RECOGNITION, CAMCORDER y UNPROCESSED.
+aunque sea la app de teléfono predeterminada o tenga un servicio de accesibilidad
+(comprobado con `dumpsys audio`: `silenced:true` en MIC, VOICE_RECOGNITION, CAMCORDER y UNPROCESSED).
 
-Solo las apps del sistema con el permiso `CAPTURE_AUDIO_OUTPUT` pueden oír una llamada. Por eso los
-traductores de llamadas que funcionan son funciones del propio fabricante (Galaxy AI en Samsung,
-Traducción en tiempo real en Google Pixel).
+La excepción son los procesos con el permiso `CAPTURE_AUDIO_OUTPUT`, que tiene el usuario *shell* de Android.
+[Shizuku](https://shizuku.rikka.app/) permite que una app normal abra un proceso con ese usuario, sin root
+ni computadora (con depuración inalámbrica). Traduya lo usa así:
 
-Traduya detecta este bloqueo, lo avisa en pantalla y no guarda grabaciones vacías. El reconocimiento y la
-traducción funcionan (ver la prueba `LiveTranslationPipelineTest`) cuando el audio llega a la app.
+```
+App Traduya ──Shizuku──▶ proceso com.traduya.app:callaudio (uid 2000, shell)
+                              AudioRecord(VOICE_DOWNLINK)   ← solo la voz de la otra persona
+             ◀── tubería PCM 16 kHz ──┘
+```
+
+Si el teléfono no ofrece `VOICE_DOWNLINK`, se prueba `VOICE_CALL` (ambos lados) y por último el micrófono
+desde ese mismo proceso, que tampoco se silencia (en ese caso se activa el altavoz).
+Comprobado en el emulador durante una llamada GSM: `src:VOICE_DOWNLINK not silenced pack:com.android.shell`.
+
+**Activación (una vez):**
+
+1. Instala Shizuku desde Google Play.
+2. Activa las *Opciones de desarrollador* (Ajustes › Acerca del teléfono › toca 7 veces «Número de compilación»).
+3. En Shizuku, pulsa **Emparejar** con *Depuración inalámbrica* y luego **Iniciar**.
+4. En Traduya › Ajustes › *Traducir llamadas normales*, pulsa **Permitir**.
+
+Tras reiniciar el teléfono hay que volver a pulsar **Iniciar** en Shizuku. Sin Shizuku, Traduya usa el micrófono con
+altavoz, que la mayoría de los teléfonos bloquean, y la llamada por internet sigue funcionando siempre.
