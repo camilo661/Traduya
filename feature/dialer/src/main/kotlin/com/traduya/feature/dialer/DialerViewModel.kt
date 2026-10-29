@@ -2,9 +2,11 @@ package com.traduya.feature.dialer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.traduya.core.domain.audio.CallAudioTap
 import com.traduya.core.domain.repository.SettingsRepository
 import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.model.Language
+import com.traduya.core.model.CallAudioTapStatus
 import com.traduya.core.model.CallLanguagePreference
 import com.traduya.core.model.CallStatus
 import com.traduya.core.telecom.CallManager
@@ -24,6 +26,7 @@ data class DialerUiState(
     val errorMessage: String? = null,
     val languagePacksMissing: Boolean = false,
     val ongoingCallLabel: String? = null,
+    val callAudioTapReady: Boolean = true,
 )
 
 @HiltViewModel
@@ -31,6 +34,7 @@ class DialerViewModel @Inject constructor(
     private val callManager: CallManager,
     settingsRepository: SettingsRepository,
     private val languagePacks: LanguagePacks,
+    private val callAudioTap: CallAudioTap,
 ) : ViewModel() {
 
     private val number = MutableStateFlow("")
@@ -51,9 +55,12 @@ class DialerViewModel @Inject constructor(
             languagePacksMissing = packsMissing,
             ongoingCallLabel = call?.takeIf { it.status != CallStatus.DISCONNECTED }?.label,
         )
+    }.combine(callAudioTap.status) { state, tapStatus ->
+        state.copy(callAudioTapReady = tapStatus == CallAudioTapStatus.READY)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DialerUiState())
 
-    fun refreshLanguagePacks() {
+    fun refresh() {
+        callAudioTap.refresh()
         viewModelScope.launch {
             packsMissing.value = !languagePacks.installed().containsAll(Language.entries)
         }

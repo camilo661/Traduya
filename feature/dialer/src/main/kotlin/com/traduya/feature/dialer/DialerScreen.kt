@@ -69,7 +69,7 @@ fun DialerRoute(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         isDefaultDialer = DialerRole.isDefault(context)
-        viewModel.refreshLanguagePacks()
+        viewModel.refresh()
     }
     val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefaultDialer = DialerRole.isDefault(context)
@@ -136,6 +136,15 @@ internal fun DialerScreen(
             InfoBanner(
                 text = "Faltan los idiomas para traducir. Descárgalos una vez y funcionan sin internet.",
                 actionLabel = "Descargar",
+                onAction = onOpenSettings,
+            )
+        }
+        AnimatedVisibility(
+            visible = isDefaultDialer && !uiState.languagePacksMissing && !uiState.callAudioTapReady,
+        ) {
+            InfoBanner(
+                text = "Para traducir llamadas normales, activa Shizuku (gratis). Toma un minuto.",
+                actionLabel = "Activar",
                 onAction = onOpenSettings,
             )
         }
