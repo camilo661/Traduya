@@ -33,6 +33,29 @@ class LanguageArbiterTest {
     }
 
     @Test
+    fun `discards line noise recognized as fillers`() {
+        val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
+
+        val result = arbiter.decide(
+            listOf(
+                Hypothesis(Language.ENGLISH, "oh oh, oh", 0.95f, 3),
+                Hypothesis(Language.CHINESE, "哦哦 嗯", 0.97f, 2),
+            ),
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun `keeps real phrases that contain fillers`() {
+        val arbiter = LanguageArbiter(listOf(Language.ENGLISH))
+
+        val result = arbiter.decide(listOf(Hypothesis(Language.ENGLISH, "oh hello there", 0.9f, 3)))
+
+        assertEquals("oh hello there", result?.text)
+    }
+
+    @Test
     fun `locks after three wins in a row`() {
         val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
 

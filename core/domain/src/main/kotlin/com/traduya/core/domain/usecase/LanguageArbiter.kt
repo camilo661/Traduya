@@ -38,7 +38,7 @@ class LanguageArbiter(
     /** Devuelve la hipótesis ganadora, o null si ninguna es fiable. */
     fun decide(hypotheses: List<Hypothesis>): Hypothesis? {
         val best = hypotheses
-            .filter { it.text.isNotBlank() && it.wordCount > 0 }
+            .filter { it.text.isNotBlank() && it.wordCount > 0 && !isOnlyFillers(it.text) }
             .maxByOrNull { score(it) }
             ?: return null
         if (best.confidence < minConfidence) return null
@@ -54,4 +54,18 @@ class LanguageArbiter(
 
     /** Una sola palabra con mucha confianza no debe ganarle a una frase completa. */
     private fun score(h: Hypothesis): Float = h.confidence * (h.wordCount / (h.wordCount + 1f))
+
+    /** El ruido de la línea suele reconocerse como «oh oh», «嗯 嗯»: no hay nada que traducir. */
+    private fun isOnlyFillers(text: String): Boolean =
+        text.lowercase().split(SEPARATORS).filter { it.isNotEmpty() }.all { word ->
+            word in FILLERS || word.all { it.toString() in FILLERS }
+        }
+
+    private companion object {
+        val SEPARATORS = Regex("[\\s\\p{Punct}，。！？、]+")
+        val FILLERS = setOf(
+            "oh", "uh", "um", "ah", "eh", "hm", "hmm", "huh", "mm", "mhm", "the", "a",
+            "哦", "嗯", "啊", "呃", "唉", "哎", "额", "噢", "呀", "哈",
+        )
+    }
 }
