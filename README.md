@@ -87,8 +87,9 @@ App Traduya ──Shizuku──▶ proceso com.traduya.app:callaudio (uid 2000, 
              ◀── tubería PCM 16 kHz ──┘
 ```
 
-Si el teléfono no ofrece `VOICE_DOWNLINK`, se prueba `VOICE_CALL` (ambos lados) y por último el micrófono
-desde ese mismo proceso, que tampoco se silencia (en ese caso se activa el altavoz).
+**Solo se traduce a la otra persona, con o sin altavoz:** se lee la señal que llega por la red, no el micrófono.
+Si el teléfono no ofrece `VOICE_DOWNLINK`, se usa `VOICE_CALL` (ambos lados) junto con `VOICE_UPLINK` (lo que
+dice el usuario) y la mezcla se silencia mientras el usuario habla (`UplinkGate`).
 Comprobado en el emulador durante una llamada GSM: `src:VOICE_DOWNLINK not silenced pack:com.android.shell`.
 
 **Activación (una vez):**
