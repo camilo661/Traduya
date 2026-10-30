@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
@@ -18,6 +19,7 @@ import kotlin.system.exitProcess
  *
  * Shell tiene el permiso CAPTURE_AUDIO_OUTPUT, así que Android no lo silencia durante
  * las llamadas y puede leer la línea telefónica (VOICE_DOWNLINK = solo la otra persona).
+ * La voz del usuario nunca se envía: o la fuente no la contiene, o se silencia con [UplinkGate].
  * El audio viaja a la app por una tubería, en PCM 16 bits little-endian a 16 kHz.
  */
 class CallAudioUserService() : ICallAudioService.Stub() {
@@ -39,18 +41,20 @@ class CallAudioUserService() : ICallAudioService.Stub() {
     }
 
     @Synchronized
-    override fun start(source: Int): ParcelFileDescriptor {
+    override fun start(source: Int, muteUser: Boolean): ParcelFileDescriptor {
         stop()
-        val record = open(source) ?: throw IllegalStateException("Fuente de audio $source no disponible")
-        record.startRecording()
-        if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
-            record.release()
-            throw IllegalStateException("La fuente de audio $source no arrancó")
+        val record = startRecord(source)
+        val userLine = if (muteUser) {
+            runCatching { startRecord(MediaRecorder.AudioSource.VOICE_UPLINK) }
+                .onFailure { record.stop(); record.release() }
+                .getOrThrow()
+        } else {
+            null
         }
         val (readSide, writeSide) = ParcelFileDescriptor.createPipe()
         running = true
         worker = thread(name = "traduya-call-audio") {
-            pump(record, ParcelFileDescriptor.AutoCloseOutputStream(writeSide))
+            pump(record, userLine, ParcelFileDescriptor.AutoCloseOutputStream(writeSide))
         }
         return readSide
     }
@@ -62,14 +66,32 @@ class CallAudioUserService() : ICallAudioService.Stub() {
         worker = null
     }
 
-    private fun pump(record: AudioRecord, output: OutputStream) {
+    private fun startRecord(source: Int): AudioRecord {
+        val record = open(source) ?: throw IllegalStateException("Fuente de audio $source no disponible")
+        record.startRecording()
+        if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+            record.release()
+            throw IllegalStateException("La fuente de audio $source no arrancó")
+        }
+        Log.i(TAG, "Grabando la fuente $source")
+        return record
+    }
+
+    private fun pump(record: AudioRecord, userLine: AudioRecord?, output: OutputStream) {
         val samples = ShortArray(CHUNK_SAMPLES)
+        val userSamples = ShortArray(CHUNK_SAMPLES)
         val bytes = ByteArray(CHUNK_SAMPLES * 2)
+        val gate = UplinkGate()
         try {
             output.use {
                 while (running) {
                     val read = record.read(samples, 0, samples.size)
                     if (read < 0) break
+                    if (userLine != null) {
+                        val userRead = userLine.read(userSamples, 0, read)
+                        if (userRead < 0) break
+                        gate.apply(samples, read, userSamples, userRead)
+                    }
                     for (i in 0 until read) {
                         bytes[i * 2] = samples[i].toInt().toByte()
                         bytes[i * 2 + 1] = (samples[i].toInt() shr 8).toByte()
@@ -81,8 +103,10 @@ class CallAudioUserService() : ICallAudioService.Stub() {
             // La app cerró la tubería: la llamada terminó
         } finally {
             running = false
-            runCatching { record.stop() }
-            record.release()
+            listOfNotNull(record, userLine).forEach {
+                runCatching { it.stop() }
+                it.release()
+            }
         }
     }
 

@@ -8,9 +8,11 @@ interface ICallAudioService {
 
     /**
      * Empieza a grabar la fuente indicada (MediaRecorder.AudioSource) a 16 kHz mono.
+     * Con muteUser, graba también VOICE_UPLINK y silencia la fuente mientras habla el usuario,
+     * para fuentes que mezclan ambos lados de la llamada.
      * Devuelve el extremo de lectura de una tubería con PCM 16 bits little-endian.
      */
-    ParcelFileDescriptor start(int source) = 1;
+    ParcelFileDescriptor start(int source, boolean muteUser) = 1;
 
     void stop() = 2;
 }
