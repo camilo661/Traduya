@@ -23,8 +23,9 @@ import javax.inject.Singleton
 /**
  * Conecta las llamadas telefónicas con la sesión de traducción.
  *
- * Con Shizuku activo, el audio sale directamente de la línea telefónica y no hace falta el altavoz.
- * Sin él, se usa el micrófono con el altavoz activado, aunque muchos teléfonos lo silencian.
+ * Con Shizuku activo, el audio sale directamente de la línea telefónica: solo la voz de la otra
+ * persona, con o sin altavoz. Sin él, se usa el micrófono (muchos teléfonos lo silencian) y
+ * la voz del usuario se descarta porque se reconoce en español.
  */
 @Singleton
 class CallSessionCoordinator @Inject constructor(
@@ -59,16 +60,11 @@ class CallSessionCoordinator @Inject constructor(
     }
 
     private fun callAudio(autoSpeaker: Boolean): Flow<AudioChunk> {
-        val useSpeaker = { if (autoSpeaker) callManager.setSpeakerOn(true) }
+        // Con Shizuku el altavoz no cambia lo que se traduce: se lee la línea, no el micrófono
+        if (autoSpeaker) callManager.setSpeakerOn(true)
         callAudioTap.refresh()
-        if (callAudioTap.status.value != CallAudioTapStatus.READY) {
-            useSpeaker()
-            return audioCapture.chunks()
-        }
-        return callAudioTap.chunks(onSpeakerNeeded = useSpeaker).catch {
-            useSpeaker()
-            emitAll(audioCapture.chunks())
-        }
+        if (callAudioTap.status.value != CallAudioTapStatus.READY) return audioCapture.chunks()
+        return callAudioTap.chunks().catch { emitAll(audioCapture.chunks()) }
     }
 
     private suspend fun end() {
