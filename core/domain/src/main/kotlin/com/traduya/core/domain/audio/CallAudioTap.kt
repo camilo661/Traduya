@@ -18,9 +18,9 @@ interface CallAudioTap {
     fun requestPermission()
 
     /**
-     * Audio de la llamada, preferiblemente solo la voz de la otra persona.
-     * Si el teléfono no deja leer la línea y hay que usar el micrófono, avisa con [onSpeakerNeeded].
-     * Falla si el acceso no está listo; quien lo use debe tener otra fuente de respaldo.
+     * Solo la voz de la otra persona, leída de la línea: el altavoz no influye y la voz
+     * del usuario nunca se incluye.
+     * Falla si el acceso no está listo o el teléfono no ofrece la línea.
      */
-    fun chunks(onSpeakerNeeded: () -> Unit): Flow<AudioChunk>
+    fun chunks(): Flow<AudioChunk>
 }

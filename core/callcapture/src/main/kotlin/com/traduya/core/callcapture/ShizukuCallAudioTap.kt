@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import com.traduya.core.callcapture.shell.CallAudioUserService
 import com.traduya.core.domain.audio.CallAudioTap
 import com.traduya.core.model.AudioChunk
@@ -77,19 +78,19 @@ internal class ShizukuCallAudioTap @Inject constructor(
         if (Shizuku.pingBinder() && !hasPermission()) Shizuku.requestPermission(PERMISSION_REQUEST_CODE)
     }
 
-    override fun chunks(onSpeakerNeeded: () -> Unit): Flow<AudioChunk> = flow {
+    override fun chunks(): Flow<AudioChunk> = flow {
         refresh()
         check(status.value == CallAudioTapStatus.READY) { "Shizuku no está listo" }
         val remote = connect()
         try {
-            for ((index, source) in SOURCES.withIndex()) {
-                val pipe = runCatching { remote.start(source) }.getOrNull() ?: continue
-                val isLastSource = index == SOURCES.lastIndex
-                if (source == MediaRecorder.AudioSource.MIC) onSpeakerNeeded()
-                val tryNextSource = relay(pipe, isLastSource)
-                if (!tryNextSource) return@flow
+            for (line in LINES) {
+                val pipe = runCatching { remote.start(line.source, line.muteUser) }
+                    .onFailure { Log.w(TAG, "La línea ${line.source} no está disponible", it) }
+                    .getOrNull() ?: continue
+                val tryNextLine = relay(pipe)
+                if (!tryNextLine) return@flow
             }
-            error("Ninguna fuente de audio funcionó con Shizuku")
+            error("El teléfono no deja leer la línea de la llamada")
         } finally {
             runCatching { remote.stop() }
         }
@@ -97,10 +98,12 @@ internal class ShizukuCallAudioTap @Inject constructor(
 
     /**
      * Reenvía el audio de la tubería.
-     * Devuelve true si la fuente se cortó o solo entregó silencio absoluto y hay que probar la siguiente.
+     * Devuelve true si la línea se cortó o nunca entregó sonido (el teléfono no la ofrece)
+     * y hay que probar la siguiente. Una línea que ya dio sonido no se abandona por silencios.
      */
-    private suspend fun FlowCollector<AudioChunk>.relay(pipe: ParcelFileDescriptor, isLastSource: Boolean): Boolean {
+    private suspend fun FlowCollector<AudioChunk>.relay(pipe: ParcelFileDescriptor): Boolean {
         val bytes = ByteArray(CHUNK_SAMPLES * 2)
+        var heardSound = false
         var silentMillis = 0
         DataInputStream(ParcelFileDescriptor.AutoCloseInputStream(pipe)).use { input ->
             while (currentCoroutineContext().isActive) {
@@ -112,10 +115,9 @@ internal class ShizukuCallAudioTap @Inject constructor(
                 val samples = ShortArray(CHUNK_SAMPLES) { i ->
                     ((bytes[i * 2].toInt() and 0xFF) or (bytes[i * 2 + 1].toInt() shl 8)).toShort()
                 }
-                silentMillis = if (samples.all { it == ZERO }) silentMillis + CHUNK_MILLIS else 0
-                val blocked = silentMillis >= SILENT_SOURCE_MILLIS
-                emit(AudioChunk(samples, AudioChunk.levelOf(samples), blocked && isLastSource))
-                if (blocked && !isLastSource) return true
+                if (samples.any { it != ZERO }) heardSound = true else silentMillis += CHUNK_MILLIS
+                emit(AudioChunk(samples, AudioChunk.levelOf(samples), blocked = false))
+                if (!heardSound && silentMillis >= SILENT_LINE_MILLIS) return true
             }
         }
         return false
@@ -157,20 +159,23 @@ internal class ShizukuCallAudioTap @Inject constructor(
     }.getOrDefault(1)
 
     private companion object {
+        const val TAG = "TraduyaCallAudio"
         const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
         const val PERMISSION_REQUEST_CODE = 4_201
         const val CONNECT_TIMEOUT_MILLIS = 8_000L
         const val CHUNK_MILLIS = 100
         const val CHUNK_SAMPLES = AudioChunk.SAMPLE_RATE * CHUNK_MILLIS / 1000
 
-        // La línea entrante solo trae a la otra persona; algunos teléfonos solo dan la mezcla
-        // de ambos lados; como último recurso, el micrófono sin restricciones (con altavoz).
-        val SOURCES = listOf(
-            MediaRecorder.AudioSource.VOICE_DOWNLINK,
-            MediaRecorder.AudioSource.VOICE_CALL,
-            MediaRecorder.AudioSource.MIC,
+        // Solo fuentes de la línea, nunca el micrófono: así la voz del usuario no se traduce.
+        // VOICE_DOWNLINK trae solo a la otra persona; VOICE_CALL mezcla ambos lados y se
+        // silencia mientras el usuario habla.
+        val LINES = listOf(
+            Line(MediaRecorder.AudioSource.VOICE_DOWNLINK, muteUser = false),
+            Line(MediaRecorder.AudioSource.VOICE_CALL, muteUser = true),
         )
-        const val SILENT_SOURCE_MILLIS = 4_000
+        const val SILENT_LINE_MILLIS = 4_000
         const val ZERO: Short = 0
     }
 }
+
+private class Line(val source: Int, val muteUser: Boolean)
