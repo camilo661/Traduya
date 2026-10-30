@@ -38,7 +38,7 @@ internal fun CallAudioTapCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = "Activo · Traduya escucha la llamada directamente, sin altavoz",
+                        text = "Activo · solo se traduce a la otra persona, con o sin altavoz",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 10.dp),
                     )

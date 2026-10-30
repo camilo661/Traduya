@@ -143,7 +143,7 @@ internal fun SettingsScreen(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             SwitchRow(
                 title = "Altavoz automático",
-                subtitle = "Solo se usa si Shizuku no está activo",
+                subtitle = "Con Shizuku, Traduya solo escucha a la otra persona aunque uses el altavoz",
                 checked = settings.autoSpeaker,
                 onCheckedChange = onAutoSpeaker,
             )
@@ -196,7 +196,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLogo(size = 40.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.3.0", style = MaterialTheme.typography.labelLarge)
+            Text("Traduya 1.3.1", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
