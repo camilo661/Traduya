@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.sqrt
 
 sealed interface PeerState {
     data object Connecting : PeerState
@@ -104,23 +103,18 @@ class PeerBridge {
     }
 
     @JavascriptInterface
-    fun onAudio(base64: String) {
-        val bytes = Base64.decode(base64, Base64.NO_WRAP)
-        val samples = ShortArray(bytes.size / 2)
-        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(samples)
-        _remoteAudio.tryEmit(AudioChunk(samples, level(samples), blocked = false))
+    fun onAudio(voiceBase64: String, callMixBase64: String) {
+        val voice = decodePcm(voiceBase64)
+        val callMix = decodePcm(callMixBase64)
+        _remoteAudio.tryEmit(AudioChunk(voice, AudioChunk.levelOf(voice), blocked = false, callMix = callMix))
     }
 
     // endregion
 
-    private fun level(samples: ShortArray): Float {
-        if (samples.isEmpty()) return 0f
-        var sum = 0.0
-        for (sample in samples) sum += sample * sample.toDouble()
-        return (sqrt(sum / samples.size) / Short.MAX_VALUE * LEVEL_GAIN).toFloat().coerceIn(0f, 1f)
-    }
-
-    private companion object {
-        const val LEVEL_GAIN = 6.0
+    private fun decodePcm(base64: String): ShortArray {
+        val bytes = Base64.decode(base64, Base64.NO_WRAP)
+        val samples = ShortArray(bytes.size / 2)
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(samples)
+        return samples
     }
 }

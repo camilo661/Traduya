@@ -70,20 +70,30 @@ function onRemoteStream(stream) {
 
   audioContext = new AudioContext({ sampleRate: 16000 });
   audioContext.resume();
-  const source = audioContext.createMediaStreamSource(stream);
-  processor = audioContext.createScriptProcessor(2048, 1, 1);
+  // Canal 0: la otra persona (se traduce). Canal 1: el micrófono del usuario (solo para la grabación)
+  const merger = audioContext.createChannelMerger(2);
+  audioContext.createMediaStreamSource(stream).connect(merger, 0, 0);
+  if (localStream) audioContext.createMediaStreamSource(localStream).connect(merger, 0, 1);
+  processor = audioContext.createScriptProcessor(2048, 2, 1);
   processor.onaudioprocess = e => {
-    const input = e.inputBuffer.getChannelData(0);
-    const pcm = new Int16Array(input.length);
-    for (let i = 0; i < input.length; i++) {
-      const s = Math.max(-1, Math.min(1, input[i]));
-      pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    const remote = e.inputBuffer.getChannelData(0);
+    const user = e.inputBuffer.getChannelData(1);
+    const voice = new Int16Array(remote.length);
+    const mix = new Int16Array(remote.length);
+    for (let i = 0; i < remote.length; i++) {
+      voice[i] = toPcm(remote[i]);
+      mix[i] = toPcm(remote[i] + user[i]);
     }
-    Traduya.onAudio(toBase64(pcm.buffer));
+    Traduya.onAudio(toBase64(voice.buffer), toBase64(mix.buffer));
   };
-  source.connect(processor);
+  merger.connect(processor);
   processor.connect(audioContext.destination); // el procesador solo corre si está conectado
   Traduya.onConnected();
+}
+
+function toPcm(sample) {
+  const s = Math.max(-1, Math.min(1, sample));
+  return s < 0 ? s * 0x8000 : s * 0x7fff;
 }
 
 function toBase64(buffer) {
