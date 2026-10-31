@@ -1,5 +1,5 @@
 // Pruebas de las reglas del directorio de números contra el emulador de Firebase.
-// Uso: firebase emulators:exec --only auth,firestore --project demo-traduya "node --test test/"
+// Uso (desde la raíz): firebase emulators:exec --only auth,firestore --project demo-traduya "node --test firebase/test/"
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -11,6 +11,22 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 async function signUp() {
   const res = await fetch(`${AUTH}/accounts:signUp?key=fake`, {
     method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ returnSecureToken: true }),
+  });
+  const json = await res.json();
+  return { uid: json.localId, token: json.idToken };
+}
+
+// Usuario de Google simulado (el emulador acepta tokens sin firmar)
+async function signInWithGoogle(emailVerified = true) {
+  const id = Math.random().toString(36).slice(2);
+  const idToken = JSON.stringify({ sub: 'g' + id, email: `caller-${id}@example.com`, email_verified: emailVerified });
+  const res = await fetch(`${AUTH}/accounts:signInWithIdp?key=fake`, {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({
+      postBody: `providerId=google.com&id_token=${encodeURIComponent(idToken)}`,
+      requestUri: 'http://localhost', returnSecureToken: true,
+    }),
   });
   const json = await res.json();
   return { uid: json.localId, token: json.idToken };
@@ -30,13 +46,25 @@ function create(user, number, peerId = 'traduya-abcdefgh12345678', owner = user.
   });
 }
 
-test('un usuario registra un número libre y cualquiera lo puede buscar', async () => {
+test('un teléfono registra un número libre y quien inició sesión lo puede buscar', async () => {
   const user = await signUp();
   const number = randomNumber();
   assert.equal((await create(user, number)).status, 200);
 
-  const found = await (await fetch(docUrl(number))).json();
+  const caller = await signInWithGoogle();
+  const found = await (await fetch(docUrl(number), { headers: auth(caller) })).json();
   assert.equal(found.fields.peerId.stringValue, 'traduya-abcdefgh12345678');
+});
+
+test('sin sesión, anónimo o con correo sin verificar no se puede buscar un número', async () => {
+  const owner = await signUp();
+  const number = randomNumber();
+  await create(owner, number);
+
+  assert.equal((await fetch(docUrl(number))).status, 403);
+  assert.equal((await fetch(docUrl(number), { headers: auth(owner) })).status, 403);
+  const unverified = await signInWithGoogle(false);
+  assert.equal((await fetch(docUrl(number), { headers: auth(unverified) })).status, 403);
 });
 
 test('nadie puede quitarle el número a quien lo registró', async () => {
@@ -63,7 +91,8 @@ test('el dueño puede cambiar y borrar su número', async () => {
   });
   assert.equal(update.status, 200);
   assert.equal((await fetch(docUrl(number), { method: 'DELETE', headers: auth(owner) })).status, 200);
-  assert.equal((await fetch(docUrl(number))).status, 404);
+  const caller = await signInWithGoogle();
+  assert.equal((await fetch(docUrl(number), { headers: auth(caller) })).status, 404);
 });
 
 test('rechaza registros a nombre de otro, sin sesión o con datos inválidos', async () => {
@@ -79,6 +108,6 @@ test('rechaza registros a nombre de otro, sin sesión o con datos inválidos', a
 });
 
 test('no se puede descargar la lista de todos los números', async () => {
-  const user = await signUp();
-  assert.equal((await fetch(`${DOCS}/numbers`, { headers: auth(user) })).status, 403);
+  const caller = await signInWithGoogle();
+  assert.equal((await fetch(`${DOCS}/numbers`, { headers: auth(caller) })).status, 403);
 });

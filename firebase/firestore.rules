@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Directorio de números para llamadas por WiFi.
-// Cualquiera puede buscar un número concreto, pero nadie puede listar todos.
+// Para buscar un número hay que iniciar sesión con un correo verificado (Google o enlace por correo).
+// Nadie puede listar todos los números.
 // Solo el teléfono que registró un número (su usuario anónimo) puede cambiarlo o borrarlo.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -13,7 +14,7 @@ service cloud.firestore {
           && request.resource.data.peerId.matches('^traduya-[a-z0-9]{16}$');
       }
 
-      allow get: if true;
+      allow get: if request.auth != null && request.auth.token.email_verified == true;
       allow list: if false;
       allow create: if request.auth != null
         && number.matches('^[+][1-9][0-9]{7,14}$')
