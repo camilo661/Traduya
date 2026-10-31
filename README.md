@@ -20,8 +20,9 @@ y la traducción de lo que dices tú.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
 - **Detección automática de idioma**: un reconocedor por idioma escucha a la vez y gana el de mayor confianza. Tras tres frases seguidas se fija el idioma para ir más rápido.
 - **Tu voz no se muestra**: un modelo de español reconoce lo que dices tú y lo descarta.
-- **Grabación de la llamada**: el mismo audio que se traduce se guarda en WAV y se reproduce desde el historial.
-- **Historial**: cada llamada con su grabación, duración, idioma y transcripción.
+- **Grabación de la llamada completa**: se guardan ambas voces en WAV y se reproducen desde el historial.
+  Solo se traduce a la otra persona.
+- **Historial**: cada llamada con su grabación, duración, idioma y todo lo que dijo la otra persona, traducido al español.
 - Interfaz 100 % en español, tema claro y oscuro.
 
 ## Arquitectura
@@ -90,6 +91,9 @@ App Traduya ──Shizuku──▶ proceso com.traduya.app:callaudio (uid 2000, 
 **Solo se traduce a la otra persona, con o sin altavoz:** se lee la señal que llega por la red, no el micrófono.
 Si el teléfono no ofrece `VOICE_DOWNLINK`, se usa `VOICE_CALL` (ambos lados) junto con `VOICE_UPLINK` (lo que
 dice el usuario) y la mezcla se silencia mientras el usuario habla (`UplinkGate`).
+
+La tubería lleva dos canales: la voz de la otra persona (se traduce) y la llamada completa
+(`VOICE_DOWNLINK + VOICE_UPLINK`, o `VOICE_CALL`), que es lo que se graba.
 Comprobado en el emulador durante una llamada GSM: `src:VOICE_DOWNLINK not silenced pack:com.android.shell`.
 
 **Activación (una vez):**
