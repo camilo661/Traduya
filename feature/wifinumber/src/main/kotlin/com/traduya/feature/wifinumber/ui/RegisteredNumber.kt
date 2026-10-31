@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.traduya.core.designsystem.component.SectionCard
+import com.traduya.core.domain.internetcall.CallPage
 
 @Composable
 internal fun RegisteredNumber(
@@ -36,7 +37,7 @@ internal fun RegisteredNumber(
                 Text(phoneNumber, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 10.dp))
             }
             Text(
-                text = "Activo. Te pueden llamar por WiFi escribiendo este número en camilo661.github.io/Traduya",
+                text = "Activo. Te pueden llamar por WiFi escribiendo este número en ${CallPage.DISPLAY}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

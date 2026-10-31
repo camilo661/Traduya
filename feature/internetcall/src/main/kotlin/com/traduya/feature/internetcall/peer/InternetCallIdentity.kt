@@ -1,6 +1,7 @@
 package com.traduya.feature.internetcall.peer
 
 import android.content.Context
+import com.traduya.core.domain.internetcall.CallPage
 import com.traduya.core.domain.wifinumber.WifiNumberRegistry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.URLEncoder
@@ -33,7 +34,7 @@ class InternetCallIdentity @Inject constructor(
 
     /** Página web que abre la otra persona (iPhone, Android o computadora) para llamar. */
     val link: String
-        get() = phoneNumber?.let { "$CALL_PAGE?n=${URLEncoder.encode(it, "UTF-8")}" } ?: "$CALL_PAGE?to=$code"
+        get() = phoneNumber?.let { "${CallPage.URL}?n=${URLEncoder.encode(it, "UTF-8")}" } ?: "${CallPage.URL}?to=$code"
 
     private fun generateCode(): String = (1..CODE_LENGTH).map { ALPHABET.random() }.joinToString("")
 
@@ -43,6 +44,5 @@ class InternetCallIdentity @Inject constructor(
         // Sin letras que se confunden al dictarlas (0/o, 1/l/i)
         const val ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
         const val PEER_PREFIX = "traduya-"
-        const val CALL_PAGE = "https://camilo661.github.io/Traduya/"
     }
 }
