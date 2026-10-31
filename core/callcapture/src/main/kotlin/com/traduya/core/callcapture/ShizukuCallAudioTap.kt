@@ -102,7 +102,7 @@ internal class ShizukuCallAudioTap @Inject constructor(
      * y hay que probar la siguiente. Una línea que ya dio sonido no se abandona por silencios.
      */
     private suspend fun FlowCollector<AudioChunk>.relay(pipe: ParcelFileDescriptor): Boolean {
-        val bytes = ByteArray(CHUNK_SAMPLES * 2)
+        val bytes = ByteArray(CHUNK_SAMPLES * FRAME_BYTES)
         var heardSound = false
         var silentMillis = 0
         DataInputStream(ParcelFileDescriptor.AutoCloseInputStream(pipe)).use { input ->
@@ -112,16 +112,18 @@ internal class ShizukuCallAudioTap @Inject constructor(
                 } catch (e: EOFException) {
                     return true
                 }
-                val samples = ShortArray(CHUNK_SAMPLES) { i ->
-                    ((bytes[i * 2].toInt() and 0xFF) or (bytes[i * 2 + 1].toInt() shl 8)).toShort()
-                }
-                if (samples.any { it != ZERO }) heardSound = true else silentMillis += CHUNK_MILLIS
-                emit(AudioChunk(samples, AudioChunk.levelOf(samples), blocked = false))
+                val voice = ShortArray(CHUNK_SAMPLES) { i -> sampleAt(bytes, i * FRAME_BYTES) }
+                val callMix = ShortArray(CHUNK_SAMPLES) { i -> sampleAt(bytes, i * FRAME_BYTES + 2) }
+                if (voice.any { it != ZERO }) heardSound = true else silentMillis += CHUNK_MILLIS
+                emit(AudioChunk(voice, AudioChunk.levelOf(voice), blocked = false, callMix = callMix))
                 if (!heardSound && silentMillis >= SILENT_LINE_MILLIS) return true
             }
         }
         return false
     }
+
+    private fun sampleAt(bytes: ByteArray, offset: Int): Short =
+        ((bytes[offset].toInt() and 0xFF) or (bytes[offset + 1].toInt() shl 8)).toShort()
 
     private suspend fun connect(): ICallAudioService {
         service?.takeIf { it.asBinder().pingBinder() }?.let { return it }
@@ -165,6 +167,7 @@ internal class ShizukuCallAudioTap @Inject constructor(
         const val CONNECT_TIMEOUT_MILLIS = 8_000L
         const val CHUNK_MILLIS = 100
         const val CHUNK_SAMPLES = AudioChunk.SAMPLE_RATE * CHUNK_MILLIS / 1000
+        const val FRAME_BYTES = 4 // dos canales de 16 bits
 
         // Solo fuentes de la línea, nunca el micrófono: así la voz del usuario no se traduce.
         // VOICE_DOWNLINK trae solo a la otra persona; VOICE_CALL mezcla ambos lados y se
