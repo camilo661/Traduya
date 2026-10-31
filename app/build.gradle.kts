@@ -12,8 +12,8 @@ android {
     defaultConfig {
         applicationId = "com.traduya.app"
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.4.0"
+        versionCode = 9
+        versionName = "1.5.0"
 
         // Solo procesadores de teléfonos reales: reduce el APK a la mitad
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
@@ -45,6 +45,7 @@ dependencies {
     implementation(projects.core.translation)
     implementation(projects.core.audio)
     implementation(projects.core.callcapture)
+    implementation(projects.core.directory)
     implementation(projects.core.session)
 
     implementation(projects.feature.onboarding)
@@ -53,6 +54,7 @@ dependencies {
     implementation(projects.feature.history)
     implementation(projects.feature.settings)
     implementation(projects.feature.internetcall)
+    implementation(projects.feature.wifinumber)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
