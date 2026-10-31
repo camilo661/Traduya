@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solo en debug: permite hablar con el emulador de Firebase por HTTP -->
+    <application android:networkSecurityConfig="@xml/firebase_emulator_network" />
+</manifest>
