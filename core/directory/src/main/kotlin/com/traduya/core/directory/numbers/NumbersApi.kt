@@ -6,6 +6,9 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
 
+/** El servidor no aceptó el token de la sesión. */
+internal class UnauthorizedException : IOException("Sesión no aceptada")
+
 /** Resultado de intentar quedarse con un número del directorio. */
 internal enum class ClaimResult { CLAIMED, TAKEN }
 
@@ -24,6 +27,7 @@ internal class NumbersApi(private val config: FirebaseConfig) {
         )
         return when {
             created.isSuccess -> ClaimResult.CLAIMED
+            created.code == HTTP_UNAUTHORIZED -> throw UnauthorizedException()
             created.code == HTTP_CONFLICT -> updateIfOwned(number, peerId, ownerUid, token)
             else -> throw IOException("No se pudo registrar el número (${created.code})")
         }
@@ -31,6 +35,7 @@ internal class NumbersApi(private val config: FirebaseConfig) {
 
     suspend fun release(number: String, token: String) {
         val response = JsonHttp.request("DELETE", documentUrl(number), bearerToken = token)
+        if (response.code == HTTP_UNAUTHORIZED) throw UnauthorizedException()
         if (!response.isSuccess && response.code != HTTP_NOT_FOUND) {
             throw IOException("No se pudo borrar el número (${response.code})")
         }
@@ -41,6 +46,7 @@ internal class NumbersApi(private val config: FirebaseConfig) {
         val updated = JsonHttp.request("PATCH", documentUrl(number), entry(ownerUid, peerId), token)
         return when {
             updated.isSuccess -> ClaimResult.CLAIMED
+            updated.code == HTTP_UNAUTHORIZED -> throw UnauthorizedException()
             updated.code == HTTP_FORBIDDEN -> ClaimResult.TAKEN
             else -> throw IOException("No se pudo registrar el número (${updated.code})")
         }
@@ -58,6 +64,7 @@ internal class NumbersApi(private val config: FirebaseConfig) {
     )
 
     private companion object {
+        const val HTTP_UNAUTHORIZED = 401
         const val HTTP_FORBIDDEN = 403
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409

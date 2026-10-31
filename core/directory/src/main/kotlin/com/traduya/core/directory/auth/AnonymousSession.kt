@@ -18,6 +18,19 @@ internal class AnonymousSession(
 ) {
     private val mutex = Mutex()
 
+    /** true si había una sesión de otro servidor (por ejemplo, del emulador de pruebas) y se descartó. */
+    val wasReset: Boolean
+
+    init {
+        // Una sesión solo vale para el servidor que la creó
+        val server = "${config.authUrl}|${config.projectId}"
+        wasReset = uid != null && prefs.getString(KEY_SERVER, null) != server
+        if (wasReset) {
+            prefs.edit().remove(KEY_UID).remove(KEY_ID_TOKEN).remove(KEY_REFRESH_TOKEN).remove(KEY_EXPIRES_AT).apply()
+        }
+        prefs.edit().putString(KEY_SERVER, server).apply()
+    }
+
     /** Identificador del usuario anónimo, o null si todavía no se creó. */
     val uid: String? get() = prefs.getString(KEY_UID, null)
 
@@ -26,7 +39,12 @@ internal class AnonymousSession(
         val cached = prefs.getString(KEY_ID_TOKEN, null)
         if (cached != null && System.currentTimeMillis() < prefs.getLong(KEY_EXPIRES_AT, 0)) return cached
         val refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null)
-        if (refreshToken == null) signUp() else refresh(refreshToken)
+        (refreshToken?.let { refresh(it) }) ?: signUp()
+    }
+
+    /** El servidor rechazó el token: el siguiente [idToken] pedirá uno nuevo. */
+    fun invalidate() {
+        prefs.edit().remove(KEY_ID_TOKEN).remove(KEY_EXPIRES_AT).apply()
     }
 
     private suspend fun signUp(): String {
@@ -44,12 +62,14 @@ internal class AnonymousSession(
         )
     }
 
-    private suspend fun refresh(refreshToken: String): String {
+    /** Renueva el token. Devuelve null si el servidor ya no acepta la sesión y hay que crear otra. */
+    private suspend fun refresh(refreshToken: String): String? {
         val response = JsonHttp.request(
             method = "POST",
             url = "${config.tokenUrl}/v1/token?key=${config.apiKey}",
             body = JSONObject().put("grant_type", "refresh_token").put("refresh_token", refreshToken),
         )
+        if (response.code == HTTP_BAD_REQUEST) return null
         if (!response.isSuccess) throw IOException("No se pudo renovar la sesión (${response.code})")
         return save(
             uid = response.body.getString("user_id"),
@@ -72,6 +92,8 @@ internal class AnonymousSession(
     }
 
     private companion object {
+        const val HTTP_BAD_REQUEST = 400 // sesión revocada, caducada o de otro proyecto
+        const val KEY_SERVER = "auth_server"
         const val KEY_UID = "auth_uid"
         const val KEY_ID_TOKEN = "auth_id_token"
         const val KEY_REFRESH_TOKEN = "auth_refresh_token"
