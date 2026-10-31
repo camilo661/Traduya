@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PhoneInTalk
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -51,6 +52,7 @@ import com.traduya.core.telecom.DialerRole
 @Composable
 fun OnboardingRoute(
     onFinished: () -> Unit,
+    onOpenWifiNumber: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -76,6 +78,7 @@ fun OnboardingRoute(
         onRequestPermissions = { permissionLauncher.launch(CallPermissions.required.toTypedArray()) },
         onRequestDefaultDialer = { roleLauncher.launch(DialerRole.requestIntent(context)) },
         onDownloadPacks = viewModel::downloadPacks,
+        onOpenWifiNumber = onOpenWifiNumber,
         onContinue = {
             viewModel.finish()
             onFinished()
@@ -89,6 +92,7 @@ internal fun OnboardingScreen(
     onRequestPermissions: () -> Unit,
     onRequestDefaultDialer: () -> Unit,
     onDownloadPacks: () -> Unit,
+    onOpenWifiNumber: () -> Unit,
     onContinue: () -> Unit,
 ) {
     Column(
@@ -131,7 +135,7 @@ internal fun OnboardingScreen(
             SetupStep(
                 number = 2,
                 icon = Icons.Rounded.PhoneInTalk,
-                title = "App de teléfono (opcional)",
+                title = "App de teléfono",
                 description = "Necesario para traducir llamadas normales. Para las llamadas por internet no hace falta.",
                 done = uiState.isDefaultDialer,
                 actionLabel = "Activar",
@@ -151,6 +155,15 @@ internal fun OnboardingScreen(
                 progress = (uiState.packsStatus as? LanguagePackStatus.Downloading)?.progress,
                 actionLabel = if (uiState.packsStatus == LanguagePackStatus.Failed) "Reintentar" else "Descargar",
                 onAction = onDownloadPacks,
+            )
+            SetupStep(
+                number = 4,
+                icon = Icons.Rounded.Wifi,
+                title = "Llamadas por WiFi (opcional)",
+                description = "Registra tu número para que te llamen por WiFi. Te explicamos antes cómo funciona.",
+                done = uiState.wifiNumberRegistered,
+                actionLabel = "Ver",
+                onAction = onOpenWifiNumber,
             )
         }
 
