@@ -49,7 +49,7 @@ import com.traduya.core.model.LanguagePackStatus
 import com.traduya.core.telecom.DialerRole
 
 @Composable
-fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsRoute(onOpenWifiNumber: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var isDefaultDialer by remember { mutableStateOf(true) }
@@ -74,6 +74,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         onInstallShizuku = { ShizukuIntents.install(context) },
         onOpenShizuku = { ShizukuIntents.open(context) },
         onAllowShizuku = viewModel::allowCallAudioTap,
+        onOpenWifiNumber = onOpenWifiNumber,
     )
 }
 
@@ -91,6 +92,7 @@ internal fun SettingsScreen(
     onInstallShizuku: () -> Unit,
     onOpenShizuku: () -> Unit,
     onAllowShizuku: () -> Unit,
+    onOpenWifiNumber: () -> Unit,
 ) {
     val settings = uiState.settings
     Column(
@@ -112,6 +114,8 @@ internal fun SettingsScreen(
             onOpenShizuku = onOpenShizuku,
             onAllow = onAllowShizuku,
         )
+
+        WifiNumberCard(phoneNumber = uiState.wifiNumber, onOpen = onOpenWifiNumber)
 
         SectionCard(title = "Idioma de la otra persona") {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -196,7 +200,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLogo(size = 40.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.4.0", style = MaterialTheme.typography.labelLarge)
+            Text("Traduya 1.5.0", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,

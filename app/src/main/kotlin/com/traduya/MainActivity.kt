@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.theme.TraduyaTheme
 import com.traduya.feature.onboarding.OnboardingRoute
+import com.traduya.feature.wifinumber.WifiNumberActivity
 import com.traduya.navigation.TraduyaMainScaffold
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -43,7 +44,10 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (uiState) {
                         MainUiState.Loading -> Unit
-                        MainUiState.NeedsOnboarding -> OnboardingRoute(onFinished = {})
+                        MainUiState.NeedsOnboarding -> OnboardingRoute(
+                            onFinished = {},
+                            onOpenWifiNumber = { startActivity(WifiNumberActivity.intent(this@MainActivity)) },
+                        )
                         MainUiState.Ready -> TraduyaMainScaffold(dialNumber = dialNumber)
                     }
                 }

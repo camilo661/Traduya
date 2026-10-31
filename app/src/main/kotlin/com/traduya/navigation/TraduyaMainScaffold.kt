@@ -28,6 +28,7 @@ import com.traduya.feature.history.detail.HistoryDetailViewModel
 import com.traduya.feature.history.list.HistoryRoute
 import com.traduya.feature.internetcall.InternetCallActivity
 import com.traduya.feature.settings.SettingsRoute
+import com.traduya.feature.wifinumber.WifiNumberActivity
 
 @Composable
 fun TraduyaMainScaffold(dialNumber: String?) {
@@ -80,7 +81,9 @@ fun TraduyaMainScaffold(dialNumber: String?) {
             composable(Routes.HISTORY) {
                 HistoryRoute(onOpenCall = { navController.navigate(Routes.callDetail(it)) })
             }
-            composable(Routes.SETTINGS) { SettingsRoute() }
+            composable(Routes.SETTINGS) {
+                SettingsRoute(onOpenWifiNumber = { context.startActivity(WifiNumberActivity.intent(context)) })
+            }
             composable(
                 route = Routes.CALL_DETAIL,
                 arguments = listOf(navArgument(HistoryDetailViewModel.CALL_ID_ARG) { type = NavType.LongType }),
