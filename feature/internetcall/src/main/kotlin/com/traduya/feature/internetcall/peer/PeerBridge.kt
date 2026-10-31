@@ -20,7 +20,8 @@ import java.nio.ByteOrder
 sealed interface PeerState {
     data object Connecting : PeerState
     data object Ready : PeerState
-    data class Incoming(val from: String) : PeerState
+    /** Llamada entrante; [idToken] es la sesión de quien llama, todavía sin comprobar. */
+    data class Incoming(val from: String, val idToken: String) : PeerState
     data object InCall : PeerState
     data object Ended : PeerState
     data class Failed(val reason: String) : PeerState
@@ -87,8 +88,8 @@ class PeerBridge {
     }
 
     @JavascriptInterface
-    fun onIncoming(from: String) {
-        _state.value = PeerState.Incoming(from)
+    fun onIncoming(from: String, idToken: String) {
+        _state.value = PeerState.Incoming(from, idToken)
     }
 
     @JavascriptInterface

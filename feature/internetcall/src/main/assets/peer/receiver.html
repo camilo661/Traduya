@@ -36,7 +36,8 @@ function connect() {
     if (current || incoming) { call.close(); return; }
     incoming = call;
     call.on('close', () => { if (incoming === call) { incoming = null; Traduya.onEnded(); } });
-    Traduya.onIncoming(call.peer);
+    // La página web envía el token de la sesión de quien llama; Kotlin lo comprueba antes de sonar
+    Traduya.onIncoming(call.peer, (call.metadata && call.metadata.idToken) || '');
   });
 }
 
