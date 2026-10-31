@@ -15,6 +15,9 @@ y la traducción de lo que dices tú.
 - **Llamadas telefónicas normales con Shizuku**: con la app gratuita [Shizuku](https://shizuku.rikka.app/) activa,
   Traduya escucha directamente la línea telefónica (solo la voz de la otra persona) y traduce sin altavoz.
   Ver [Traducir llamadas normales](#traducir-llamadas-normales-shizuku).
+- **Llamadas por WiFi con tu número (opcional)**: registras tu número una vez y te llaman escribiéndolo en
+  la página de Traduya, sin enlace ni código. Es voluntario, se explica antes de aceptar y la otra persona ve
+  que la llamada se traduce y se graba. Ver [firebase/README.md](firebase/README.md).
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
@@ -36,6 +39,7 @@ core/domain             Contratos (repositorios, motor de traducción) y casos d
 core/data               Room (historial) y DataStore (ajustes)
 core/audio              Captura del micrófono y grabación WAV
 core/callcapture        Audio de la línea telefónica vía Shizuku (proceso con uid de shell)
+core/directory          Directorio de números para llamadas por WiFi (Firebase por REST)
 core/translation        Vosk (voz a texto) + ML Kit (traducción) y paquetes de idioma
 core/telecom            InCallService, CallManager, notificaciones y rol de marcador
 core/session            Motor de traducción en vivo de una llamada (audio → IA → historial)
@@ -44,7 +48,9 @@ core/designsystem       Tema azul claro, logo y componentes compartidos
 feature/onboarding      Bienvenida, permisos y app predeterminada
 feature/dialer          Teclado para marcar
 feature/incall          Llamadas telefónicas
-feature/internetcall    Llamadas por internet (WebRTC + PeerJS en un WebView) con enlace y QR
+feature/internetcall    Llamadas por internet (WebRTC + PeerJS en un WebView) con enlace, QR o número
+feature/wifinumber      Registro voluntario del número para llamadas por WiFi
+firebase/               Reglas de Firestore, pruebas de las reglas y guía para crear el proyecto
 docs/                   Página web para llamar (GitHub Pages): https://camilo661.github.io/Traduya/
 feature/history         Historial y detalle de cada llamada
 feature/settings        Idioma, altavoz automático y modelos
