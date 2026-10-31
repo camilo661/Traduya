@@ -20,7 +20,8 @@ import kotlin.system.exitProcess
  * Shell tiene el permiso CAPTURE_AUDIO_OUTPUT, así que Android no lo silencia durante
  * las llamadas y puede leer la línea telefónica (VOICE_DOWNLINK = solo la otra persona).
  * La voz del usuario nunca se envía: o la fuente no la contiene, o se silencia con [UplinkGate].
- * El audio viaja a la app por una tubería, en PCM 16 bits little-endian a 16 kHz.
+ * El audio viaja a la app por una tubería, en PCM 16 bits little-endian a 16 kHz y dos canales:
+ * la voz de la otra persona (para traducir) y la llamada completa (para grabar).
  */
 class CallAudioUserService() : ICallAudioService.Stub() {
 
@@ -44,17 +45,17 @@ class CallAudioUserService() : ICallAudioService.Stub() {
     override fun start(source: Int, muteUser: Boolean): ParcelFileDescriptor {
         stop()
         val record = startRecord(source)
-        val userLine = if (muteUser) {
-            runCatching { startRecord(MediaRecorder.AudioSource.VOICE_UPLINK) }
-                .onFailure { record.stop(); record.release() }
-                .getOrThrow()
-        } else {
-            null
+        // Lo que dice el usuario: para grabar ambos lados y, si la fuente lo mezcla, para quitarlo
+        val userLine = runCatching { startRecord(MediaRecorder.AudioSource.VOICE_UPLINK) }.getOrNull()
+        if (muteUser && userLine == null) {
+            record.stop()
+            record.release()
+            throw IllegalStateException("Sin VOICE_UPLINK no se puede separar la voz del usuario")
         }
         val (readSide, writeSide) = ParcelFileDescriptor.createPipe()
         running = true
         worker = thread(name = "traduya-call-audio") {
-            pump(record, userLine, ParcelFileDescriptor.AutoCloseOutputStream(writeSide))
+            pump(record, userLine, muteUser, ParcelFileDescriptor.AutoCloseOutputStream(writeSide))
         }
         return readSide
     }
@@ -77,26 +78,32 @@ class CallAudioUserService() : ICallAudioService.Stub() {
         return record
     }
 
-    private fun pump(record: AudioRecord, userLine: AudioRecord?, output: OutputStream) {
+    /**
+     * Escribe tramas de dos canales: [voz de la otra persona, llamada completa].
+     * El primero se traduce y el segundo se graba.
+     */
+    private fun pump(record: AudioRecord, userLine: AudioRecord?, muteUser: Boolean, output: OutputStream) {
         val samples = ShortArray(CHUNK_SAMPLES)
         val userSamples = ShortArray(CHUNK_SAMPLES)
-        val bytes = ByteArray(CHUNK_SAMPLES * 2)
+        val full = ShortArray(CHUNK_SAMPLES)
+        val bytes = ByteArray(CHUNK_SAMPLES * 4)
         val gate = UplinkGate()
         try {
             output.use {
                 while (running) {
                     val read = record.read(samples, 0, samples.size)
                     if (read < 0) break
-                    if (userLine != null) {
-                        val userRead = userLine.read(userSamples, 0, read)
-                        if (userRead < 0) break
-                        gate.apply(samples, read, userSamples, userRead)
-                    }
+                    val userRead = userLine?.read(userSamples, 0, read)?.coerceAtLeast(0) ?: 0
+                    userSamples.fill(0, userRead, read)
                     for (i in 0 until read) {
-                        bytes[i * 2] = samples[i].toInt().toByte()
-                        bytes[i * 2 + 1] = (samples[i].toInt() shr 8).toByte()
+                        full[i] = if (muteUser) samples[i] else mix(samples[i], userSamples[i])
                     }
-                    it.write(bytes, 0, read * 2)
+                    if (muteUser) gate.apply(samples, read, userSamples, userRead)
+                    for (i in 0 until read) {
+                        putSample(bytes, i * 4, samples[i])
+                        putSample(bytes, i * 4 + 2, full[i])
+                    }
+                    it.write(bytes, 0, read * 4)
                 }
             }
         } catch (e: IOException) {
@@ -108,6 +115,14 @@ class CallAudioUserService() : ICallAudioService.Stub() {
                 it.release()
             }
         }
+    }
+
+    private fun mix(a: Short, b: Short): Short =
+        (a + b).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+
+    private fun putSample(bytes: ByteArray, offset: Int, sample: Short) {
+        bytes[offset] = sample.toInt().toByte()
+        bytes[offset + 1] = (sample.toInt() shr 8).toByte()
     }
 
     @SuppressLint("MissingPermission")
