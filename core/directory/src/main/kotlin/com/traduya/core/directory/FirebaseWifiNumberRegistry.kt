@@ -1,9 +1,11 @@
 package com.traduya.core.directory
 
 import android.content.Context
+import android.util.Log
 import com.traduya.core.directory.auth.AnonymousSession
 import com.traduya.core.directory.numbers.ClaimResult
 import com.traduya.core.directory.numbers.NumbersApi
+import com.traduya.core.directory.numbers.UnauthorizedException
 import com.traduya.core.domain.wifinumber.WifiNumberException
 import com.traduya.core.domain.wifinumber.WifiNumberRegistry
 import com.traduya.core.model.WifiNumberAccount
@@ -38,27 +40,33 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
         val previous = _account.value
         // Se conserva el identificador si se vuelve a registrar el mismo número
         val peerId = previous?.takeIf { it.phoneNumber == phoneNumber }?.peerId ?: newPeerId()
-        val result = withConnection {
-            val token = session.idToken()
+        val result = withSession { token ->
             val uid = session.uid ?: throw IOException("Sesión sin usuario")
             numbers.claim(phoneNumber, peerId, uid, token)
         }
         if (result == ClaimResult.TAKEN) throw WifiNumberException(WifiNumberError.NUMBER_TAKEN)
         if (previous != null && previous.phoneNumber != phoneNumber) {
-            runCatching { withConnection { numbers.release(previous.phoneNumber, session.idToken()) } }
+            runCatching { withSession { token -> numbers.release(previous.phoneNumber, token) } }
         }
         return WifiNumberAccount(phoneNumber, peerId).also(::save)
     }
 
     override suspend fun unregister() {
         val current = _account.value ?: return
-        withConnection { numbers.release(current.phoneNumber, session.idToken()) }
+        withSession { token -> numbers.release(current.phoneNumber, token) }
         save(null)
     }
 
-    private suspend fun <T> withConnection(block: suspend () -> T): T = try {
-        block()
+    /** Ejecuta [block] con un token válido; si el servidor lo rechaza, pide otro y reintenta una vez. */
+    private suspend fun <T> withSession(block: suspend (token: String) -> T): T = try {
+        try {
+            block(session.idToken())
+        } catch (e: UnauthorizedException) {
+            session.invalidate()
+            block(session.idToken())
+        }
     } catch (e: IOException) {
+        Log.w(TAG, "Fallo al hablar con el directorio", e)
         throw WifiNumberException(WifiNumberError.NO_CONNECTION, e)
     }
 
@@ -68,6 +76,8 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
     }
 
     private fun savedAccount(): WifiNumberAccount? {
+        // El número registrado pertenece a la sesión: si la sesión se descartó, el número también
+        if (session.wasReset) prefs.edit().remove(KEY_NUMBER).remove(KEY_PEER_ID).apply()
         val number = prefs.getString(KEY_NUMBER, null) ?: return null
         val peerId = prefs.getString(KEY_PEER_ID, null) ?: return null
         return WifiNumberAccount(number, peerId)
@@ -79,6 +89,7 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "TraduyaDirectory"
         const val PREFS_NAME = "wifi_number"
         const val KEY_NUMBER = "number"
         const val KEY_PEER_ID = "peer_id"
