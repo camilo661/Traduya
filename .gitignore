@@ -12,4 +12,4 @@ build/
 *.keystore
 
 # Registros del emulador de Firebase
-firebase/*-debug.log
+*-debug.log
