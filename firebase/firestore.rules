@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Directorio de números para llamadas por WiFi.
+// Cualquiera puede buscar un número concreto, pero nadie puede listar todos.
+// Solo el teléfono que registró un número (su usuario anónimo) puede cambiarlo o borrarlo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /numbers/{number} {
+      function isValidEntry() {
+        return request.resource.data.keys().hasOnly(['owner', 'peerId'])
+          && request.resource.data.owner == request.auth.uid
+          && request.resource.data.peerId is string
+          && request.resource.data.peerId.matches('^traduya-[a-z0-9]{16}$');
+      }
+
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && number.matches('^[+][1-9][0-9]{7,14}$')
+        && isValidEntry();
+      allow update: if request.auth != null
+        && resource.data.owner == request.auth.uid
+        && isValidEntry();
+      allow delete: if request.auth != null
+        && resource.data.owner == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
