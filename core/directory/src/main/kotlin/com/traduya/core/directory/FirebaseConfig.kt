@@ -17,12 +17,15 @@ internal data class FirebaseConfig(
     val numbersUrl: String get() = "$firestoreUrl/v1/projects/$projectId/databases/(default)/documents/numbers"
 
     companion object {
+        private const val EMULATOR_PROJECT_ID = "demo-traduya"
+
         fun fromBuildConfig(): FirebaseConfig {
             val emulator = BuildConfig.FIREBASE_EMULATOR_HOST.takeIf { BuildConfig.DEBUG && it.isNotBlank() }
             return if (emulator != null) {
                 FirebaseConfig(
-                    projectId = BuildConfig.FIREBASE_PROJECT_ID.ifBlank { "demo-traduya" },
-                    apiKey = BuildConfig.FIREBASE_API_KEY.ifBlank { "emulator" },
+                    // Mismo proyecto de prueba que la página web y las pruebas de las reglas
+                    projectId = EMULATOR_PROJECT_ID,
+                    apiKey = "emulator",
                     authUrl = "http://$emulator:9099/identitytoolkit.googleapis.com",
                     tokenUrl = "http://$emulator:9099/securetoken.googleapis.com",
                     firestoreUrl = "http://$emulator:8080",
