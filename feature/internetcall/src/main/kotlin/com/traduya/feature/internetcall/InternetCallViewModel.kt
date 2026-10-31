@@ -1,13 +1,16 @@
 package com.traduya.feature.internetcall
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.traduya.core.callui.CallUiState
+import com.traduya.core.domain.internetcall.CallerVerifier
 import com.traduya.core.domain.repository.HistoryRepository
 import com.traduya.core.domain.translation.CallTranslationSession
 import com.traduya.core.model.CallDirection
 import com.traduya.core.model.CallStatus
+import com.traduya.core.model.VerifiedCaller
 import com.traduya.feature.internetcall.peer.CallAudioRouter
 import com.traduya.feature.internetcall.peer.InternetCallIdentity
 import com.traduya.feature.internetcall.peer.PeerBridge
@@ -36,6 +39,7 @@ class InternetCallViewModel @Inject constructor(
     application: Application,
     val identity: InternetCallIdentity,
     private val session: CallTranslationSession,
+    private val callerVerifier: CallerVerifier,
     historyRepository: HistoryRepository,
 ) : AndroidViewModel(application) {
 
@@ -44,6 +48,9 @@ class InternetCallViewModel @Inject constructor(
 
     private val muted = MutableStateFlow(false)
     private val speaker = MutableStateFlow(true)
+
+    /** Quién llama, ya comprobado; null mientras se verifica o si no hay llamada. */
+    private val caller = MutableStateFlow<VerifiedCaller?>(null)
     private var connectedAtMillis: Long? = null
     private var sessionOpen = false
 
@@ -68,10 +75,11 @@ class InternetCallViewModel @Inject constructor(
         session.state,
         transcript,
         ticker,
-    ) { (peer, isMuted, isSpeaker), translation, lines, now ->
+        caller,
+    ) { (peer, isMuted, isSpeaker), translation, lines, now, verifiedCaller ->
         CallUiState(
-            callerLabel = "Llamada por internet",
-            number = "",
+            callerLabel = verifiedCaller?.label ?: "Comprobando quién llama…",
+            number = verifiedCaller?.takeIf { it.displayName != null }?.email.orEmpty(),
             status = when (peer) {
                 is PeerState.Incoming -> CallStatus.RINGING
                 PeerState.InCall -> CallStatus.ACTIVE
@@ -99,10 +107,7 @@ class InternetCallViewModel @Inject constructor(
 
     private suspend fun onPeerState(state: PeerState) {
         when (state) {
-            is PeerState.Incoming -> if (!sessionOpen) {
-                sessionOpen = true
-                session.begin(number = "Internet", direction = CallDirection.INCOMING)
-            }
+            is PeerState.Incoming -> if (!sessionOpen) onIncoming(state)
 
             PeerState.InCall -> {
                 connectedAtMillis = System.currentTimeMillis()
@@ -120,16 +125,32 @@ class InternetCallViewModel @Inject constructor(
         }
     }
 
+    /** Solo suena si quien llama inició sesión en la página web; si no, se rechaza. */
+    private suspend fun onIncoming(state: PeerState.Incoming) {
+        val verified = callerVerifier.verify(state.idToken)
+        if (verified == null) {
+            Log.i(TAG, "Llamada rechazada: quien llama no tiene una sesión válida")
+            bridge.reject()
+            return
+        }
+        caller.value = verified
+        sessionOpen = true
+        session.begin(number = verified.label, direction = CallDirection.INCOMING)
+    }
+
     private suspend fun closeSession() {
         if (!sessionOpen) return
         sessionOpen = false
         connectedAtMillis = null
+        caller.value = null
         muted.value = false
         audioRouter.endCall()
         session.finish()
     }
 
-    fun answer() = bridge.answer()
+    fun answer() {
+        if (caller.value != null) bridge.answer()
+    }
 
     fun hangUp() {
         if (bridge.state.value is PeerState.Incoming) bridge.reject() else bridge.hangUp()
@@ -157,6 +178,7 @@ class InternetCallViewModel @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "TraduyaInternetCall"
         const val ENDED_SCREEN_MILLIS = 1_500L
     }
 }
