@@ -44,7 +44,7 @@ import com.traduya.feature.internetcall.peer.PeerState
 @Composable
 internal fun WaitingScreen(
     state: PeerState,
-    code: String,
+    identityLabel: String,
     link: String,
     onShare: () -> Unit,
     onCopy: () -> Unit,
@@ -83,7 +83,7 @@ internal fun WaitingScreen(
             }
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "Tu código: $code",
+                text = identityLabel,
                 style = MaterialTheme.typography.titleLarge,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,

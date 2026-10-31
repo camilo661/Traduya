@@ -79,7 +79,7 @@ class InternetCallActivity : ComponentActivity() {
 
                         else -> WaitingScreen(
                             state = peerState,
-                            code = viewModel.identity.code,
+                            identityLabel = viewModel.identity.label,
                             link = viewModel.identity.link,
                             onShare = ::shareLink,
                             onCopy = ::copyLink,
