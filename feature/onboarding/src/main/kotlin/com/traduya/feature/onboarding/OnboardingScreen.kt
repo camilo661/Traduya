@@ -132,7 +132,7 @@ internal fun OnboardingScreen(
                 number = 2,
                 icon = Icons.Rounded.PhoneInTalk,
                 title = "App de teléfono (opcional)",
-                description = "Para hacer tus llamadas normales desde Traduya. No es necesario para traducir.",
+                description = "Necesario para traducir llamadas normales. Para las llamadas por internet no hace falta.",
                 done = uiState.isDefaultDialer,
                 actionLabel = "Activar",
                 onAction = onRequestDefaultDialer,
