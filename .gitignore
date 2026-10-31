@@ -10,3 +10,6 @@ build/
 *.apk
 !/release/*.apk
 *.keystore
+
+# Registros del emulador de Firebase
+firebase/*-debug.log
