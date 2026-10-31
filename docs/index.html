@@ -45,9 +45,13 @@
   .label { font-size: 13px; color: var(--muted); margin-top: 8px; }
   input {
     width: 100%; margin-top: 14px; padding: 14px 16px; border-radius: 14px; border: 0;
-    font-size: 18px; text-align: center; letter-spacing: 2px;
+    font-size: 17px; text-align: center; letter-spacing: .5px;
   }
   .hidden { display: none !important; }
+  .notice {
+    margin-top: 16px; padding: 10px 12px; border-radius: 14px; font-size: 13px; line-height: 1.4;
+    background: rgba(255,255,255,.16);
+  }
   .note { color: var(--muted); font-size: 13px; text-align: center; max-width: 340px; margin-top: 24px; line-height: 1.45; }
 </style>
 </head>
@@ -61,7 +65,8 @@
   <div class="card">
     <div class="status" id="status">Ready to call · 准备拨打</div>
     <div class="timer" id="timer"></div>
-    <input id="code" class="hidden" placeholder="Code · 代码" autocapitalize="off" autocomplete="off">
+    <input id="target" class="hidden" placeholder="Number or code · 号码或代码"
+           inputmode="text" autocapitalize="off" autocomplete="off">
     <div class="actions">
       <div id="callBox">
         <button class="round call" id="callBtn" aria-label="Call">
@@ -82,6 +87,7 @@
         <div class="label">Hang up · 挂断</div>
       </div>
     </div>
+    <div class="notice">This call is translated and recorded by Traduya.<br>本通话将由 Traduya 翻译并录音。</div>
   </div>
   <p class="note">Works in Safari and Chrome. Allow the microphone when asked.<br>请在提示时允许使用麦克风。</p>
 
@@ -97,22 +103,55 @@ const ICE_SERVERS = [
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-let code = (params.get('to') || '').trim().toLowerCase();
+// Directorio de números (Firebase): mismo proyecto que la app (gradle.properties)
+const DIRECTORY = { projectId: '', apiKey: '' };
+const linkTarget = (params.get('n') || params.get('to') || '').trim();
 let peer = null, call = null, localStream = null, remoteAudio = null, timer = null, muted = false, connected = false;
 
-if (!code) $('code').classList.remove('hidden');
+if (!linkTarget) $('target').classList.remove('hidden');
+
+/** "+57 300 123-4567" o "0057…" → "+573001234567"; null si no parece un número de teléfono. */
+function normalizeNumber(value) {
+  const compact = value.replace(/[\s().-]/g, '');
+  const international = compact.startsWith('00') ? '+' + compact.slice(2) : compact;
+  return /^\+[1-9][0-9]{7,14}$/.test(international) ? international : null;
+}
+
+function directoryUrl() {
+  // Solo para pruebas automáticas: ?directory=http://127.0.0.1:8080/... (emulador de Firebase)
+  const override = params.get('directory');
+  if (override && /^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(override)) return override;
+  if (!DIRECTORY.projectId) return null;
+  return `https://firestore.googleapis.com/v1/projects/${DIRECTORY.projectId}/databases/(default)/documents`;
+}
+
+/** Convierte lo que escribió la persona (número o código) en el identificador de la conexión. */
+async function resolvePeerId(value) {
+  const looksLikeNumber = /^[+0]/.test(value) || /^[0-9\s().-]{8,}$/.test(value);
+  if (!looksLikeNumber) return 'traduya-' + value.toLowerCase();
+
+  const number = normalizeNumber(value);
+  const base = directoryUrl();
+  if (!number) throw new Error('Include the country code, e.g. +57… · 请输入国家代码');
+  if (!base) throw new Error('Calling by number is not available yet · 暂不支持号码拨打');
+  const key = DIRECTORY.apiKey ? `?key=${DIRECTORY.apiKey}` : '';
+  const res = await fetch(`${base}/numbers/${encodeURIComponent(number)}${key}`);
+  if (res.status === 404) throw new Error('This number is not on Traduya · 该号码未注册');
+  if (!res.ok) throw new Error('Connection error · 连接错误');
+  return (await res.json()).fields.peerId.stringValue;
+}
 
 function setStatus(text) { $('status').textContent = text; }
 function show(id, visible) { $(id).classList.toggle('hidden', !visible); }
 
 function inCallUi(active) {
   show('callBox', !active); show('muteBox', active); show('hangBox', active);
-  if (!code) show('code', !active);
+  if (!linkTarget) show('target', !active);
 }
 
 async function startCall() {
-  code = code || $('code').value.trim().toLowerCase();
-  if (!code) { setStatus('Enter the code · 输入代码'); return; }
+  const target = linkTarget || $('target').value.trim();
+  if (!target) { setStatus('Enter the number or code · 输入号码或代码'); return; }
   inCallUi(true);
   setStatus('Connecting… · 连接中…');
 
@@ -131,6 +170,15 @@ async function startCall() {
     return;
   }
 
+  let peerId;
+  try {
+    peerId = await resolvePeerId(target);
+  } catch (e) {
+    setStatus(e.message);
+    finish(false);
+    return;
+  }
+
   peer = new Peer({ config: { iceServers: ICE_SERVERS }, debug: 1 });
   peer.on('error', e => {
     window.lastError = e.type;
@@ -144,7 +192,7 @@ async function startCall() {
   peer.on('disconnected', () => { if (!connected) setStatus('Reconnecting… · 重新连接…'); });
   peer.on('open', () => {
     setStatus('Ringing… · 呼叫中…');
-    call = peer.call('traduya-' + code, localStream);
+    call = peer.call(peerId, localStream);
     call.on('stream', stream => {
       remoteAudio.srcObject = stream;
       remoteAudio.play().catch(() => {});
