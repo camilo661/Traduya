@@ -31,6 +31,7 @@ include(":core:audio")
 include(":core:session")
 include(":core:callui")
 include(":core:callcapture")
+include(":core:directory")
 
 // Funcionalidades: cada pantalla vive en su propio módulo
 include(":feature:onboarding")
@@ -39,3 +40,4 @@ include(":feature:incall")
 include(":feature:history")
 include(":feature:settings")
 include(":feature:internetcall")
+include(":feature:wifinumber")
