@@ -12,8 +12,8 @@ android {
     defaultConfig {
         applicationId = "com.traduya.app"
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.5.0"
+        versionCode = 10
+        versionName = "1.5.1"
 
         // Solo procesadores de teléfonos reales: reduce el APK a la mitad
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
