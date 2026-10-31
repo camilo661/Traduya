@@ -44,7 +44,8 @@ import javax.inject.Singleton
 
 /**
  * Motor de traducción en vivo de una llamada:
- * el audio de la otra persona se graba y, a la vez, se transcribe y traduce palabra a palabra.
+ * se graba la llamada completa y, a la vez, la voz de la otra persona se transcribe y traduce
+ * palabra a palabra. En el historial solo se guardan las frases traducidas de la otra persona.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -136,7 +137,8 @@ internal class LiveTranslationSession @Inject constructor(
         audioJob = scope.launch(Dispatchers.IO) {
             try {
                 source.collect { chunk ->
-                    recording?.write(chunk.samples)
+                    // Se graba la llamada completa, pero solo se traduce a la otra persona
+                    recording?.write(chunk.callMix ?: chunk.samples)
                     audio.emit(chunk)
                     _state.update { it.copy(audioLevel = chunk.level, micBlocked = chunk.blocked) }
                 }
