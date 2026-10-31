@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.traduya.core.domain.audio.CallAudioTap
 import com.traduya.core.domain.repository.SettingsRepository
+import com.traduya.core.domain.wifinumber.WifiNumberRegistry
 import com.traduya.core.domain.translation.LanguagePacks
 import com.traduya.core.model.AppSettings
 import com.traduya.core.model.CallAudioTapStatus
@@ -24,6 +25,7 @@ data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
     val packs: Map<Language, LanguagePackStatus> = Language.entries.associateWith { LanguagePackStatus.Missing },
     val callAudioTap: CallAudioTapStatus = CallAudioTapStatus.NOT_INSTALLED,
+    val wifiNumber: String? = null,
 )
 
 @HiltViewModel
@@ -31,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val languagePacks: LanguagePacks,
     private val callAudioTap: CallAudioTap,
+    wifiNumbers: WifiNumberRegistry,
 ) : ViewModel() {
 
     private val packs = MutableStateFlow(Language.entries.associateWith<Language, LanguagePackStatus> { LanguagePackStatus.Missing })
@@ -39,8 +42,9 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.settings,
         packs,
         callAudioTap.status,
-    ) { settings, packs, tapStatus ->
-        SettingsUiState(settings, packs, tapStatus)
+        wifiNumbers.account,
+    ) { settings, packs, tapStatus, wifiAccount ->
+        SettingsUiState(settings, packs, tapStatus, wifiAccount?.phoneNumber)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     init {
