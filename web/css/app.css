@@ -1,125 +1,178 @@
+/* Traduya · estilo de cristal sobre azul hielo, con los colores del logo */
+
 :root {
-  --sky: #4FC3F7; --deep: #0288D1; --green: #22C55E; --red: #EF4444;
-  --text: #FFFFFF; --muted: rgba(255,255,255,.78); --card: rgba(255,255,255,.12);
+  --navy: #12284A;
+  --blue: #1F6FD1;
+  --sky: #4FB3F0;
+  --green: #22C55E;
+  --red: #EF4444;
+
+  --text: var(--navy);
+  --muted: #55657C;
+  --bg-top: #F7FAFE;
+  --bg-bottom: #E4EEF9;
+  --glow-1: rgba(79, 179, 240, .28);
+  --glow-2: rgba(31, 111, 209, .16);
+  --glass: rgba(255, 255, 255, .58);
+  --glass-strong: rgba(255, 255, 255, .82);
+  --glass-border: rgba(255, 255, 255, .9);
+  --line: rgba(18, 40, 74, .12);
+  --shadow: 0 12px 34px rgba(31, 111, 209, .13), 0 2px 6px rgba(18, 40, 74, .05);
+  --tint: rgba(31, 111, 209, .08);
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #E6EEF8;
+    --muted: #A6B6CB;
+    --bg-top: #0A1729;
+    --bg-bottom: #0F2644;
+    --glow-1: rgba(79, 179, 240, .20);
+    --glow-2: rgba(31, 111, 209, .22);
+    --glass: rgba(27, 47, 76, .55);
+    --glass-strong: rgba(27, 47, 76, .85);
+    --glass-border: rgba(255, 255, 255, .10);
+    --line: rgba(255, 255, 255, .14);
+    --shadow: 0 12px 34px rgba(0, 0, 0, .35);
+    --tint: rgba(79, 179, 240, .12);
+  }
+  .name, .mini-name { filter: brightness(0) invert(1); }
+  /* Halo claro detrás del emblema para que sus letras se lean sobre el azul marino */
+  .hero .emblem, .mini-logo {
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(234, 243, 252, .92) 0 56%, rgba(234, 243, 252, 0) 71%);
+  }
+}
+
 * { box-sizing: border-box; }
+html { background: var(--bg-bottom); }
 html, body { margin: 0; min-height: 100%; }
-html { background: #0EA5E9; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, #0C4A6E 0%, #0369A1 55%, #0EA5E9 100%) fixed;
+  background:
+    radial-gradient(circle at 92% 6%, var(--glow-1), transparent 45%),
+    radial-gradient(circle at 4% 78%, var(--glow-2), transparent 50%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom)) fixed;
+  min-height: 100vh;
   display: flex; flex-direction: column; align-items: center;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  padding: max(12px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  -webkit-font-smoothing: antialiased;
 }
 .hidden { display: none !important; }
 
-/* Selector de idioma */
-.languages { display: flex; gap: 6px; align-self: flex-end; }
-.languages button {
-  background: transparent; border: 1px solid rgba(255,255,255,.35); color: var(--muted);
-  padding: 6px 12px; font-size: 13px; font-weight: 600;
-}
-.languages button.active { background: #fff; color: var(--deep); border-color: #fff; }
+/* Barra superior */
+.topbar { width: 100%; max-width: 420px; display: flex; align-items: center; gap: 8px; }
+.mini-logo { width: 34px; height: 34px; }
+.mini-name { height: 26px; margin-right: auto; }
+.languages { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.languages button { background: transparent; color: var(--muted); padding: 6px 11px; font-size: 13px; font-weight: 700; }
+.languages button.active { background: var(--blue); color: #fff; }
 
-/* Encabezado (se oculta en la pantalla de llamar para que quepa el teclado) */
-body.compact .logo, body.compact h1, body.compact .sub { display: none; }
-body.compact #callCard { margin-top: 10px; }
-.logo {
-  width: 72px; height: 72px; border-radius: 22px; margin-top: 8px;
-  background: linear-gradient(135deg, var(--sky), var(--deep));
-  display: grid; place-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.25);
-}
-h1 { font-size: 28px; margin: 14px 0 4px; }
-h2 { font-size: 19px; margin: 0 0 6px; }
-.sub { color: var(--muted); text-align: center; max-width: 360px; line-height: 1.45; margin: 0; }
-.muted { color: var(--muted); font-size: 14px; margin: 0 0 16px; line-height: 1.4; }
+/* Presentación */
+.hero { display: flex; flex-direction: column; align-items: center; margin-top: 8px; }
+.hero .emblem { width: 148px; height: 148px; filter: drop-shadow(0 12px 24px rgba(31, 111, 209, .22)); }
+.hero .name { width: 230px; margin-top: 4px; }
+.sub { color: var(--muted); text-align: center; max-width: 360px; line-height: 1.5; margin: 14px 0 0; font-size: 15px; }
 
-/* Tarjetas */
+/* La barra superior solo muestra el nombre cuando la presentación está oculta */
+body:not(.compact) .mini-logo, body:not(.compact) .mini-name { visibility: hidden; }
+body.compact .hero { display: none; }
+
+/* Tarjetas de cristal */
 .card {
-  width: 100%; max-width: 400px; margin-top: 20px; padding: 20px;
-  background: var(--card); border-radius: 24px; text-align: center;
+  width: 100%; max-width: 420px; margin-top: 18px; padding: 22px 20px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  text-align: center;
 }
+h2 { font-size: 20px; margin: 0 0 6px; letter-spacing: -.2px; }
+.muted { color: var(--muted); font-size: 14px; margin: 0 0 16px; line-height: 1.45; }
 .card.how { text-align: left; }
-.how ol { margin: 8px 0 0; padding-left: 22px; line-height: 1.5; color: var(--muted); }
+.how ol { margin: 8px 0 0; padding-left: 22px; line-height: 1.55; color: var(--muted); }
 .how li + li { margin-top: 6px; }
+.note { color: var(--muted); font-size: 13px; text-align: center; max-width: 360px; margin-top: 18px; }
 
-/* Controles */
+/* Botones */
 button {
-  border: 0; border-radius: 999px; color: #fff; font-size: 16px; font-weight: 600;
-  cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: inherit;
+  border: 0; border-radius: 999px; font-size: 16px; font-weight: 600; font-family: inherit;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .12s ease, opacity .12s ease;
 }
+button:active { transform: scale(.97); }
 button:disabled { opacity: .5; }
-.wide { width: 100%; padding: 14px 18px; display: flex; gap: 10px; align-items: center; justify-content: center; }
-.google { background: #fff; color: #1F2937; }
-.secondary { background: rgba(255,255,255,.2); margin-top: 10px; }
-#welcomeCard .primary { margin-top: 4px; }
-.link { background: none; color: #fff; text-decoration: underline; font-size: 14px; padding: 4px; }
-input {
-  width: 100%; margin-top: 14px; padding: 14px 16px; border-radius: 14px; border: 0;
-  font-size: 17px; text-align: center; font-family: inherit;
+.wide { width: 100%; padding: 15px 18px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+.primary {
+  margin-top: 18px; color: #fff;
+  background: linear-gradient(135deg, var(--sky), var(--blue));
+  box-shadow: 0 8px 20px rgba(31, 111, 209, .28);
 }
-.divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 2px; color: var(--muted); font-size: 14px; }
-.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.3); }
-.message { min-height: 20px; margin: 12px 0 0; font-size: 14px; line-height: 1.4; }
+.secondary { margin-top: 10px; color: var(--text); background: var(--glass-strong); border: 1px solid var(--line); }
+.google { background: #fff; color: #1F2937; border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(18, 40, 74, .06); }
+.link { background: none; color: var(--blue); font-size: 14px; padding: 4px; font-weight: 600; }
+#welcomeCard .primary { margin-top: 4px; }
+#otherAccountBtn, #backBtn { display: block; margin: 14px auto 0; }
+.message { min-height: 20px; margin: 12px 0 0; font-size: 14px; line-height: 1.4; color: var(--blue); }
 
-/* Formularios de registro */
+/* Formularios */
 .card.form { text-align: left; }
 .card.form h2, .card.form > .muted { text-align: center; }
-label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
-.card.form input, select { margin-top: 0; text-align: left; }
-select {
-  width: 100%; padding: 14px 16px; border-radius: 14px; border: 0; font-size: 17px;
-  font-family: inherit; background: #fff; color: #1F2937; -webkit-appearance: none; appearance: none;
+label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 6px; color: var(--muted); letter-spacing: .2px; }
+input, select {
+  width: 100%; padding: 14px 16px; border-radius: 16px; font-size: 17px; font-family: inherit;
+  color: var(--text); background: var(--glass-strong); border: 1px solid var(--line); outline: none;
 }
+input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(31, 111, 209, .15); }
+select { -webkit-appearance: none; appearance: none; }
 input.code { text-align: center; font-size: 26px; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
-.primary { background: #fff; color: var(--deep); margin-top: 18px; }
 .links { display: flex; justify-content: space-between; margin-top: 10px; }
-#otherAccountBtn, #backBtn { display: block; margin: 14px auto 0; }
 
-/* Teclado para marcar */
+/* Pantalla de llamar */
+.session { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.session span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wifi-only {
-  margin: 0 0 12px; padding: 6px 12px; border-radius: 999px; display: inline-block;
-  font-size: 13px; font-weight: 600; background: rgba(34,197,94,.22); color: #DCFCE7;
+  display: inline-block; margin: 0 0 12px; padding: 6px 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: #15803D; background: rgba(34, 197, 94, .14);
 }
 #dialCountry { text-align: center; font-size: 15px; padding: 10px 14px; }
+
+/* Teclado de cristal */
 .dial-display {
   position: relative; display: flex; justify-content: center; align-items: baseline; gap: 6px;
-  min-height: 56px; margin: 14px 0 6px; padding: 0 44px;
+  min-height: 52px; margin: 12px 0 4px; padding: 0 44px;
   font-size: 32px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
-#dialPrefix { color: var(--muted); font-size: 24px; }
+#dialPrefix { color: var(--muted); font-size: 22px; }
 #dialNumber { white-space: nowrap; }
 #dialNumber.long { font-size: 26px; }
-.dial-delete {
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  background: none; color: var(--muted); padding: 8px; border-radius: 12px;
-}
+.dial-delete { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; color: var(--muted); padding: 8px; border-radius: 12px; }
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 18px; margin: 4px auto 0; max-width: 248px; }
 .key {
-  aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.16);
+  aspect-ratio: 1; border-radius: 50%; color: var(--text);
+  background: var(--glass-strong); border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 12px rgba(31, 111, 209, .10);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   user-select: none; -webkit-user-select: none; touch-action: manipulation;
 }
-.key:active { background: rgba(255,255,255,.34); }
+.key:active { background: var(--tint); }
 .key .digit { font-size: 27px; font-weight: 500; line-height: 1; }
 .key .letters { font-size: 9px; letter-spacing: 2px; color: var(--muted); min-height: 12px; margin-top: 3px; }
 .call-target { font-size: 26px; font-weight: 600; margin: 18px 0 6px; font-variant-numeric: tabular-nums; }
+.status { font-size: 16px; font-weight: 600; min-height: 22px; margin-top: 6px; }
+.timer { font-variant-numeric: tabular-nums; color: var(--muted); margin-top: 4px; min-height: 18px; }
 
-/* Llamada */
-.session { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-bottom: 14px; }
-.session span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.status { font-size: 17px; font-weight: 600; min-height: 24px; }
-.timer { font-variant-numeric: tabular-nums; color: var(--muted); margin-top: 6px; min-height: 20px; }
-.actions { display: flex; gap: 28px; justify-content: center; margin-top: 16px; }
-.round { width: 76px; height: 76px; display: grid; place-items: center; }
-.call { background: var(--green); box-shadow: 0 8px 24px rgba(34,197,94,.45); }
-.hang { background: var(--red); box-shadow: 0 8px 24px rgba(239,68,68,.45); }
-.mute { background: rgba(255,255,255,.18); }
-.mute.on { background: #fff; color: var(--deep); }
+/* Botones de la llamada */
+.actions { display: flex; gap: 28px; justify-content: center; margin-top: 14px; }
+.round { width: 72px; height: 72px; display: grid; place-items: center; }
+.call { background: var(--green); color: #fff; box-shadow: 0 10px 24px rgba(34, 197, 94, .38); }
+.hang { background: var(--red); color: #fff; box-shadow: 0 10px 24px rgba(239, 68, 68, .38); }
+.mute { background: var(--glass-strong); color: var(--text); border: 1px solid var(--line); }
+.mute.on { background: var(--blue); color: #fff; }
 .label { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .notice {
-  margin-top: 18px; padding: 10px 12px; border-radius: 14px; font-size: 13px; line-height: 1.4;
-  background: rgba(255,255,255,.16);
+  margin-top: 18px; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.4;
+  color: var(--muted); background: var(--tint);
 }
-.note { color: var(--muted); font-size: 13px; text-align: center; max-width: 360px; margin-top: 20px; }
