@@ -19,7 +19,8 @@ y la traducción de lo que dices tú.
   la página de Traduya, sin enlace ni código. Es voluntario, se explica antes de aceptar y la otra persona ve
   que la llamada se traduce y se graba. Ver [firebase/README.md](firebase/README.md).
 - **Quien llama se registra**: en la página web (español, inglés y chino) hay que **registrarse** una vez con
-  Google, nombre completo y teléfono con país (llega un código de 6 dígitos al Gmail) e **iniciar sesión**.
+  Google, nombre completo y teléfono con país (llega a su Gmail un enlace para confirmar) e **iniciar sesión**.
+  Es gratis: no usa servidor ni tarjeta, las reglas de Firestore hacen cumplir el registro.
   Traduya comprueba el registro, muestra el nombre y el teléfono de quien llama y rechaza a quien no está registrado.
 - **Teclado para llamar en la web**: tras registrarse e iniciar sesión, la página abre un teclado (país + número)
   para llamar solo por internet (WiFi o datos) a las personas que registraron su número en la app.
@@ -55,7 +56,6 @@ feature/dialer          Teclado para marcar
 feature/incall          Llamadas telefónicas
 feature/internetcall    Llamadas por internet (WebRTC + PeerJS en un WebView) con enlace, QR o número
 feature/wifinumber      Registro voluntario del número para llamadas por WiFi
-functions/              Funciones de Firebase: registro con código de 6 dígitos al Gmail
 firebase/               Reglas de Firestore, pruebas contra los emuladores y la guía de Firebase
 web/                    Página web para llamar (Firebase Hosting): https://traduya-66592.web.app
 docs/                   Dirección antigua en GitHub Pages: redirige a la nueva
