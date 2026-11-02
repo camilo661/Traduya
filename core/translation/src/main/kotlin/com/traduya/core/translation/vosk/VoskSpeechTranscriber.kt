@@ -18,7 +18,8 @@ import javax.inject.Inject
  *
  * Un reconocedor por idioma escucha el mismo audio a la vez. Cuando uno detecta el final
  * de una frase, se cierran todos en el mismo punto y el [LanguageArbiter] decide qué idioma
- * era. Las frases en español son del propio usuario y se descartan.
+ * era. Las frases en español son del propio usuario y se descartan, salvo que se pida transcribir
+ * la voz del usuario (subtítulos que se envían a quien llama desde la web).
  */
 internal class VoskSpeechTranscriber @Inject constructor(
     private val models: VoskModelStore,
@@ -35,7 +36,8 @@ internal class VoskSpeechTranscriber @Inject constructor(
             val model = models.load(language) ?: continue
             recognizers[language] = Recognizer(model, AudioChunk.SAMPLE_RATE.toFloat()).apply { setWords(true) }
         }
-        val foreign = recognizers.keys.filter { it != Language.SPANISH }
+        // Con ignoreUserSpeech el español es la voz del usuario; sin él, también se transcribe (subtítulos propios)
+        val foreign = recognizers.keys.filter { !config.ignoreUserSpeech || it != Language.SPANISH }
         if (foreign.isEmpty()) {
             emit(SpeechEvent.Error("Descarga los idiomas en Ajustes para traducir", fatal = true))
             recognizers.values.forEach { it.close() }
@@ -69,7 +71,7 @@ internal class VoskSpeechTranscriber @Inject constructor(
                 }
                 lastPartial = ""
                 val winner = arbiter.decide(hypotheses)
-                if (winner == null || winner.language == Language.SPANISH) {
+                if (winner == null || (config.ignoreUserSpeech && winner.language == Language.SPANISH)) {
                     emit(SpeechEvent.Discarded)
                 } else {
                     emit(SpeechEvent.Final(winner.text, winner.language, winner.confidence))

@@ -17,8 +17,9 @@ sealed interface SpeechEvent {
 }
 
 /**
- * @param foreignLanguages idiomas posibles de la otra persona.
+ * @param foreignLanguages idiomas posibles de quien habla.
  * @param ignoreUserSpeech escucha también el español para descartar lo que dice el usuario.
+ *   Con false se transcribe lo que llega en [foreignLanguages], aunque sea español (la propia voz).
  */
 data class TranscriptionConfig(
     val foreignLanguages: List<Language>,
