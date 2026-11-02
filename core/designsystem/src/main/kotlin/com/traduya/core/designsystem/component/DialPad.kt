@@ -30,12 +30,12 @@ private val keys = listOf(
     listOf("*" to "", "0" to "+", "#" to ""),
 )
 
-/** Teclado numérico redondo. Mantener pulsado el 0 escribe "+". */
+/** Teclado numérico de teclas de cristal redondas. Mantener pulsado el 0 escribe "+". */
 @Composable
 fun DialPad(
     onKey: (Char) -> Unit,
     modifier: Modifier = Modifier,
-    keyColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    keyColor: Color = GlassDefaults.containerColor(),
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -73,6 +73,7 @@ private fun DialKey(
             shape = CircleShape,
             color = keyColor,
             contentColor = contentColor,
+            border = GlassDefaults.border(),
             modifier = Modifier
                 .fillMaxWidth(0.82f)
                 .aspectRatio(1f)
