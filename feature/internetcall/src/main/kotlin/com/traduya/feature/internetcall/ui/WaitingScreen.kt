@@ -154,7 +154,7 @@ private fun HowItWorks() {
             Text("Cómo funciona", style = MaterialTheme.typography.titleSmall, color = Color.White)
             listOf(
                 "Envía el enlace a la otra persona o que escanee el código QR.",
-                "Lo abre en su navegador (iPhone, Android o computadora) y toca Call. No instala nada.",
+                "Lo abre en su navegador (iPhone, Android o computadora), se registra una vez con Google y toca Llamar. No instala nada.",
                 "Contestas aquí y ves en español, al instante, todo lo que te dice.",
             ).forEachIndexed { index, step ->
                 Row {
