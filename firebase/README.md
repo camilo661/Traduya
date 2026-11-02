@@ -4,14 +4,25 @@ Las llamadas por WiFi usan un proyecto gratuito de Firebase (plan Spark), `tradu
 
 - **Authentication**
   - *Anónima*: cada teléfono con Traduya recibe un usuario anónimo que lo identifica como dueño de su número.
-  - *Google* y *enlace por correo*: quien llama desde la página web debe iniciar sesión. La app de quien recibe
-    comprueba ese inicio de sesión (`accounts:lookup`) y rechaza las llamadas sin una sesión válida.
-- **Firestore**: colección `numbers/{+E164}` con `{ owner, peerId }`.
-- **Reglas** ([firestore.rules](firestore.rules)): para buscar un número hay que iniciar sesión con un correo
-  verificado; nadie puede listar todos; solo el dueño puede cambiarlo o borrarlo.
+  - *Google*: quien llama desde la página web se **registra** (cuenta de Google + nombre completo + teléfono con
+    país + código de 6 dígitos que llega a su Gmail) y después **inicia sesión**.
+- **Functions** ([`functions/`](../functions)):
+  - `sendRegistrationCode`: guarda nombre y teléfono y envía el código al Gmail (vence en 10 minutos,
+    1 por minuto, 5 al día).
+  - `confirmRegistration`: comprueba el código (5 intentos), crea la ficha en `callers/{uid}` y marca la cuenta
+    con `registered: true`.
+- **Firestore**:
+  - `numbers/{+E164}` con `{ owner, peerId }`: el directorio de números.
+  - `callers/{uid}` con `{ fullName, phone, email }`: la ficha de quien llama (solo la escriben las funciones).
+  - `registrations/{uid}`: los códigos pendientes (solo las funciones; se guarda la huella, no el código).
+- **Reglas** ([firestore.rules](firestore.rules)): solo quien se registró puede buscar un número; nadie puede
+  listarlos; solo el dueño puede cambiarlo o borrarlo; nadie puede escribir fichas ni ver códigos.
 - **Hosting**: la página para llamar ([`web/`](../web)) en <https://traduya-66592.web.app>.
 
-La app habla con Firebase por su API REST, sin SDKs. La página web usa el SDK web de Firebase para iniciar sesión.
+La app de quien recibe comprueba el token de quien llama (`accounts:lookup`), exige la marca `registered`, lee
+su ficha y muestra su nombre y teléfono. Rechaza sin sonar las llamadas de cuentas sin registro.
+
+La app habla con Firebase por su API REST, sin SDKs. La página web usa el SDK web de Firebase.
 
 ## Crear el proyecto (una vez, unos 5 minutos)
 
@@ -20,7 +31,6 @@ La app habla con Firebase por su API REST, sin SDKs. La página web usa el SDK w
 2. **Compilación › Authentication › Comenzar › Método de acceso** y habilita:
    - **Anónimo**.
    - **Google** (elige tu correo como correo de asistencia).
-   - **Correo electrónico/contraseña**, con la opción **Vínculo de correo electrónico (acceso sin contraseña)**.
 3. **Compilación › Firestore Database › Crear base de datos**, en **modo de producción**.
    Elige la ubicación más cercana (por ejemplo `southamerica-east1` o `nam5`).
 4. En Firestore, pestaña **Reglas**: borra lo que hay, pega el contenido de `firestore.rules` y pulsa **Publicar**.
@@ -36,13 +46,28 @@ Pon los dos valores en:
 
 La clave web de Firebase es pública por diseño; la seguridad está en las reglas.
 
-## Publicar la página y las reglas
+## Correo que envía los códigos
+
+Las funciones necesitan el **plan Blaze** (pago por uso con tarjeta; con este uso el costo esperado es 0 USD)
+y una cuenta de Gmail con **verificación en dos pasos** y una **contraseña de aplicación**
+(<https://myaccount.google.com/apppasswords>). Se guardan en Secret Manager, nunca en el código:
+
+```bash
+firebase functions:secrets:set GMAIL_USER           # el Gmail que envía, por ejemplo traduya.codigos@gmail.com
+firebase functions:secrets:set GMAIL_APP_PASSWORD   # la contraseña de aplicación de 16 letras
+```
+
+En el emulador se usan los valores de `functions/.secret.local` (no se sube a git) y el código no se envía:
+la función lo devuelve como `debugCode` para las pruebas.
+
+## Publicar
 
 Desde la raíz del repositorio ([firebase.json](../firebase.json) y [.firebaserc](../.firebaserc)):
 
 ```bash
 firebase login
-firebase deploy --only hosting,firestore:rules
+(cd functions && npm install)
+firebase deploy --only functions,firestore:rules,hosting
 ```
 
 La dirección antigua (`camilo661.github.io/Traduya`, carpeta `docs/`) redirige a la nueva, así que los enlaces
@@ -53,8 +78,8 @@ y códigos QR que ya se compartieron siguen funcionando.
 Desde la raíz del repositorio:
 
 ```bash
-firebase emulators:start --only auth,firestore,hosting --project demo-traduya
-node --test firebase/test/                                                 # pruebas de las reglas
+firebase emulators:start --only auth,firestore,functions,hosting --project demo-traduya
+node --test firebase/test/                                                 # reglas y registro
 ./gradlew :app:assembleDebug -Ptraduya.firebase.emulatorHost=10.0.2.2     # app contra el emulador
 ```
 

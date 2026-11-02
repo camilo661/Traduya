@@ -18,8 +18,9 @@ y la traducción de lo que dices tú.
 - **Llamadas por WiFi con tu número (opcional)**: registras tu número una vez y te llaman escribiéndolo en
   la página de Traduya, sin enlace ni código. Es voluntario, se explica antes de aceptar y la otra persona ve
   que la llamada se traduce y se graba. Ver [firebase/README.md](firebase/README.md).
-- **Quien llama inicia sesión**: en la página web (español, inglés y chino) hay que entrar con Google o con un
-  enlace por correo. Traduya comprueba esa sesión, muestra quién llama y rechaza las llamadas sin sesión.
+- **Quien llama se registra**: en la página web (español, inglés y chino) hay que **registrarse** una vez con
+  Google, nombre completo y teléfono con país (llega un código de 6 dígitos al Gmail) e **iniciar sesión**.
+  Traduya comprueba el registro, muestra el nombre y el teléfono de quien llama y rechaza a quien no está registrado.
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
@@ -52,7 +53,8 @@ feature/dialer          Teclado para marcar
 feature/incall          Llamadas telefónicas
 feature/internetcall    Llamadas por internet (WebRTC + PeerJS en un WebView) con enlace, QR o número
 feature/wifinumber      Registro voluntario del número para llamadas por WiFi
-firebase/               Reglas de Firestore, sus pruebas y la guía de Firebase
+functions/              Funciones de Firebase: registro con código de 6 dígitos al Gmail
+firebase/               Reglas de Firestore, pruebas contra los emuladores y la guía de Firebase
 web/                    Página web para llamar (Firebase Hosting): https://traduya-66592.web.app
 docs/                   Dirección antigua en GitHub Pages: redirige a la nueva
 feature/history         Historial y detalle de cada llamada
