@@ -3,7 +3,9 @@ package com.traduya.core.directory
 import android.content.Context
 import com.traduya.core.directory.auth.AnonymousSession
 import com.traduya.core.directory.callers.FirebaseCallerVerifier
+import com.traduya.core.directory.internet.FirebaseInternetDirectory
 import com.traduya.core.domain.internetcall.CallerVerifier
+import com.traduya.core.domain.internetcall.InternetDirectory
 import com.traduya.core.domain.wifinumber.WifiNumberRegistry
 import dagger.Binds
 import dagger.Module
@@ -22,6 +24,9 @@ internal abstract class DirectoryModule {
 
     @Binds
     abstract fun bindCallerVerifier(impl: FirebaseCallerVerifier): CallerVerifier
+
+    @Binds
+    abstract fun bindInternetDirectory(impl: FirebaseInternetDirectory): InternetDirectory
 
     companion object {
         /** Preferencias donde se guardan la sesión anónima y el número registrado. */
