@@ -2,6 +2,7 @@ package com.traduya.core.directory
 
 import android.content.Context
 import android.util.Log
+import com.traduya.core.directory.appusers.AppUsersApi
 import com.traduya.core.directory.auth.AnonymousSession
 import com.traduya.core.directory.numbers.ClaimResult
 import com.traduya.core.directory.numbers.NumbersApi
@@ -26,6 +27,7 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
     private val config: FirebaseConfig,
     private val session: AnonymousSession,
     private val numbers: NumbersApi,
+    private val appUsers: AppUsersApi,
 ) : WifiNumberRegistry {
 
     private val prefs = context.getSharedPreferences(DirectoryModule.PREFS_NAME, Context.MODE_PRIVATE)
@@ -45,6 +47,8 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
             numbers.claim(phoneNumber, peerId, uid, token)
         }
         if (result == ClaimResult.TAKEN) throw WifiNumberException(WifiNumberError.NUMBER_TAKEN)
+        // Con su ficha de app, este teléfono puede llamar y quien recibe sabe quién llama
+        runCatching { withSession { token -> appUsers.save(session.uid.orEmpty(), phoneNumber, token) } }
         if (previous != null && previous.phoneNumber != phoneNumber) {
             runCatching { withSession { token -> numbers.release(previous.phoneNumber, token) } }
         }
@@ -54,6 +58,7 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
     override suspend fun unregister() {
         val current = _account.value ?: return
         withSession { token -> numbers.release(current.phoneNumber, token) }
+        runCatching { withSession { token -> appUsers.delete(session.uid.orEmpty(), token) } }
         save(null)
     }
 
