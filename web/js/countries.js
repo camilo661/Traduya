@@ -22,6 +22,21 @@ export function defaultCountry() {
   return region && DIAL_CODES[region] ? region : 'US';
 }
 
+/** Prefijo internacional de un país ("CO" → "57"). */
+export function dialCodeOf(iso) {
+  return DIAL_CODES[iso];
+}
+
+/** Separa un número internacional en país y número local ("+573001112233" → CO, "3001112233"). */
+export function splitInternational(number) {
+  const digits = number.replace(/\D/g, '');
+  // El prefijo más largo que coincida; con +1 se prefiere Estados Unidos
+  const match = Object.entries(DIAL_CODES)
+    .filter(([, dial]) => digits.startsWith(dial))
+    .sort(([isoA, a], [isoB, b]) => b.length - a.length || (isoA === 'US' ? -1 : isoB === 'US' ? 1 : 0))[0];
+  return match ? { iso: match[0], local: digits.slice(match[1].length) } : null;
+}
+
 /** Une el prefijo del país con el número local; si ya empieza por "+", se usa tal cual. */
 export function internationalNumber(iso, localNumber) {
   const typed = localNumber.trim();
