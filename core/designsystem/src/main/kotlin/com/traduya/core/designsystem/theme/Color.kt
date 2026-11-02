@@ -3,47 +3,47 @@ package com.traduya.core.designsystem.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Marca Traduya: azul claro
-val SkyBlue = Color(0xFF4FC3F7)
-val SkyBlueBright = Color(0xFF29B6F6)
-val SkyBlueDeep = Color(0xFF0288D1)
-val Navy = Color(0xFF0B3954)
+// Marca Traduya (tomada del logo): azul marino del nombre, azul del teléfono y celeste del globo
+val Navy = Color(0xFF12284A)
+val BrandBlue = Color(0xFF1F6FD1)
+val SkyBlue = Color(0xFF4FB3F0)
+val IceBlue = Color(0xFFEAF3FC)
 
 // Acciones de llamada
 val CallGreen = Color(0xFF22C55E)
 val HangUpRed = Color(0xFFEF4444)
 
-// Tema claro
-internal val LightPrimary = SkyBlueDeep
+// Tema claro: cristal sobre azul hielo
+internal val LightPrimary = BrandBlue
 internal val LightOnPrimary = Color.White
-internal val LightPrimaryContainer = Color(0xFFD9F1FF)
-internal val LightOnPrimaryContainer = Color(0xFF00344F)
-internal val LightSecondary = SkyBlueBright
-internal val LightSecondaryContainer = Color(0xFFE6F6FE)
-internal val LightOnSecondaryContainer = Color(0xFF003549)
-internal val LightBackground = Color(0xFFF4F9FD)
+internal val LightPrimaryContainer = Color(0xFFDCEAFB)
+internal val LightOnPrimaryContainer = Navy
+internal val LightSecondary = SkyBlue
+internal val LightSecondaryContainer = Color(0xFFE3F1FC)
+internal val LightOnSecondaryContainer = Navy
+internal val LightBackground = Color(0xFFF2F7FC)
 internal val LightSurface = Color.White
-internal val LightSurfaceVariant = Color(0xFFE7F1F8)
-internal val LightOnSurface = Color(0xFF0F1D28)
-internal val LightOnSurfaceVariant = Color(0xFF52626F)
-internal val LightOutline = Color(0xFFC6D5E0)
+internal val LightSurfaceVariant = Color(0xFFE6EEF7)
+internal val LightOnSurface = Navy
+internal val LightOnSurfaceVariant = Color(0xFF55657C)
+internal val LightOutline = Color(0xFFCBD8E6)
 
-// Tema oscuro
-internal val DarkPrimary = Color(0xFF8AD6FF)
-internal val DarkOnPrimary = Color(0xFF00344F)
-internal val DarkPrimaryContainer = Color(0xFF004B70)
-internal val DarkOnPrimaryContainer = Color(0xFFD9F1FF)
+// Tema oscuro: cristal sobre azul marino
+internal val DarkPrimary = Color(0xFF8CC4FF)
+internal val DarkOnPrimary = Color(0xFF0A2547)
+internal val DarkPrimaryContainer = Color(0xFF1B4478)
+internal val DarkOnPrimaryContainer = Color(0xFFDCEAFB)
 internal val DarkSecondary = SkyBlue
-internal val DarkSecondaryContainer = Color(0xFF16384C)
-internal val DarkOnSecondaryContainer = Color(0xFFD3EFFF)
-internal val DarkBackground = Color(0xFF0A141C)
-internal val DarkSurface = Color(0xFF101C26)
-internal val DarkSurfaceVariant = Color(0xFF1B2A36)
-internal val DarkOnSurface = Color(0xFFE3EEF6)
-internal val DarkOnSurfaceVariant = Color(0xFFA3B4C1)
-internal val DarkOutline = Color(0xFF34495A)
+internal val DarkSecondaryContainer = Color(0xFF173659)
+internal val DarkOnSecondaryContainer = Color(0xFFD6E9FB)
+internal val DarkBackground = Color(0xFF0A1729)
+internal val DarkSurface = Color(0xFF13243D)
+internal val DarkSurfaceVariant = Color(0xFF1B2F4C)
+internal val DarkOnSurface = Color(0xFFE6EEF8)
+internal val DarkOnSurfaceVariant = Color(0xFFA6B6CB)
+internal val DarkOutline = Color(0xFF2E4566)
 
 object TraduyaGradients {
-    val brand = Brush.linearGradient(listOf(SkyBlue, SkyBlueDeep))
-    val call = Brush.verticalGradient(listOf(Color(0xFF0C4A6E), Color(0xFF0369A1), Color(0xFF0EA5E9)))
+    val brand = Brush.linearGradient(listOf(SkyBlue, BrandBlue))
+    val call = Brush.verticalGradient(listOf(Color(0xFF0A1D38), Color(0xFF123A6B), Color(0xFF1F6FD1)))
 }

@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.traduya.core.designsystem.component.CallActionButton
 import com.traduya.core.designsystem.theme.CallGreen
 import com.traduya.core.designsystem.theme.HangUpRed
-import com.traduya.core.designsystem.theme.SkyBlueDeep
+import com.traduya.core.designsystem.theme.BrandBlue
 import com.traduya.core.callui.CallUiState
 
 private val activeContainer = Color.White
@@ -78,7 +78,7 @@ private fun ToggleButton(
         label = label,
         onClick = onClick,
         containerColor = if (checked) activeContainer else inactiveContainer,
-        contentColor = if (checked) SkyBlueDeep else Color.White,
+        contentColor = if (checked) BrandBlue else Color.White,
     )
 }
 
