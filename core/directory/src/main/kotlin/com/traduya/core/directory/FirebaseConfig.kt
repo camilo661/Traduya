@@ -18,6 +18,9 @@ internal data class FirebaseConfig(
     /** Ruta de la colección de números en la API REST de Firestore. */
     val numbersUrl: String get() = "$documentsUrl/numbers"
 
+    /** Ruta del número de cada teléfono con la app. */
+    val appUsersUrl: String get() = "$documentsUrl/appUsers"
+
     /** Ruta de las fichas de quien llama (nombre completo y teléfono). */
     val callersUrl: String get() = "$documentsUrl/callers"
 
