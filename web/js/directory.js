@@ -1,5 +1,5 @@
-// Busca en el directorio de Traduya a quién pertenece un número, y lee la ficha de quien llama.
-import { FIRESTORE_DOCUMENTS_URL } from './config.js';
+// Busca en el directorio de Traduya a quién pertenece un número.
+import { getDocument } from './firestore.js';
 
 /** Error con la clave del texto que se muestra a la persona (ver i18n.js). */
 export class CallError extends Error {
@@ -20,26 +20,19 @@ function looksLikeNumber(value) {
   return /^[+0]/.test(value) || /^[0-9\s().-]{8,}$/.test(value);
 }
 
-/** Convierte lo que escribió la persona (número o código) en el identificador de la conexión. */
+/** Convierte lo que se marcó (número o código antiguo) en el identificador de la conexión. */
 export async function resolvePeerId(target, idToken) {
   if (!looksLikeNumber(target)) return 'traduya-' + target.toLowerCase();
 
   const number = normalizeNumber(target);
   if (!number) throw new CallError('needCountry');
 
-  const response = await fetch(`${FIRESTORE_DOCUMENTS_URL}/numbers/${encodeURIComponent(number)}`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-  if (response.status === 404) throw new CallError('notRegistered');
-  if (!response.ok) throw new CallError('connectionError');
-  return (await response.json()).fields.peerId.stringValue;
-}
-
-/** Nombre completo con el que se registró quien llama (su ficha en "callers"). */
-export async function fetchFullName(uid, idToken) {
-  const response = await fetch(`${FIRESTORE_DOCUMENTS_URL}/callers/${uid}`, {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-  if (!response.ok) return null;
-  return (await response.json()).fields?.fullName?.stringValue ?? null;
+  let entry;
+  try {
+    entry = await getDocument(`numbers/${encodeURIComponent(number)}`, idToken);
+  } catch (e) {
+    throw new CallError('connectionError');
+  }
+  if (!entry) throw new CallError('notRegistered');
+  return entry.peerId;
 }
