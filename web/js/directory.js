@@ -1,5 +1,8 @@
-// Busca en el directorio de Traduya a quién pertenece un número.
+// Directorio de números de Traduya: a quién pertenece un número y si está activo para recibir.
 import { getDocument } from './firestore.js';
+
+/** Un número está activo si renovó su presencia hace menos de este tiempo (se renueva cada 40 s). */
+export const ACTIVE_WINDOW_MS = 100 * 1000;
 
 /** Error con la clave del texto que se muestra a la persona (ver i18n.js). */
 export class CallError extends Error {
@@ -20,6 +23,14 @@ function looksLikeNumber(value) {
   return /^[+0]/.test(value) || /^[0-9\s().-]{8,}$/.test(value);
 }
 
+/** Busca un número: { peerId, active } o null si no está en Traduya. */
+export async function lookupNumber(number, idToken) {
+  const entry = await getDocument(`numbers/${encodeURIComponent(number)}`, idToken);
+  if (!entry) return null;
+  const active = entry.lastSeen instanceof Date && Date.now() - entry.lastSeen.getTime() < ACTIVE_WINDOW_MS;
+  return { peerId: entry.peerId, active };
+}
+
 /** Convierte lo que se marcó (número o código antiguo) en el identificador de la conexión. */
 export async function resolvePeerId(target, idToken) {
   if (!looksLikeNumber(target)) return 'traduya-' + target.toLowerCase();
@@ -29,7 +40,7 @@ export async function resolvePeerId(target, idToken) {
 
   let entry;
   try {
-    entry = await getDocument(`numbers/${encodeURIComponent(number)}`, idToken);
+    entry = await lookupNumber(number, idToken);
   } catch (e) {
     throw new CallError('connectionError');
   }
