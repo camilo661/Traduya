@@ -77,6 +77,7 @@ const STRINGS = {
     lang_es: 'Español',
     lang_en: 'Inglés',
     lang_zh: 'Chino',
+    noAnswer: 'No contesta. Inténtalo más tarde.',
     browserNote: 'Funciona en Safari y Chrome.',
   },
   en: {
@@ -154,6 +155,7 @@ const STRINGS = {
     lang_es: 'Spanish',
     lang_en: 'English',
     lang_zh: 'Chinese',
+    noAnswer: 'No answer. Try again later.',
     browserNote: 'Works in Safari and Chrome.',
   },
   zh: {
@@ -231,6 +233,7 @@ const STRINGS = {
     lang_es: '西班牙语',
     lang_en: '英语',
     lang_zh: '中文',
+    noAnswer: '无人接听，请稍后再试。',
     browserNote: '支持 Safari 和 Chrome。',
   },
 };

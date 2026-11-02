@@ -2,6 +2,9 @@
 // Los subtítulos viajan por un canal de datos aparte: cada lado envía el texto de su propia voz.
 import { readyPeer } from './peer.js';
 
+/** Si nadie contesta en este tiempo, la llamada se termina. */
+const RING_TIMEOUT_MS = 45 * 1000;
+
 let state = null;
 
 function newState(events, lang) {
@@ -46,6 +49,7 @@ export async function placeCall(peerId, idToken, lang, events) {
 
   events.onStatus('ringing');
   current.media = peer.call(peerId, current.localStream, { metadata: { idToken, kind: 'web', lang } });
+  setTimeout(() => { if (!current.connected) end(current, 'noAnswer'); }, RING_TIMEOUT_MS);
   watchMedia(current, () => attachData(peer.connect(peerId, { reliable: true }), current));
 }
 
@@ -121,6 +125,8 @@ function attachData(connection, current) {
     if (message.type === 'hello') current.events.onHello?.({ kind: message.kind, lang: message.lang });
     if (message.type === 'caption' && message.text) current.events.onCaption?.(message);
   });
+  // Si el otro lado cuelga, su canal se cierra: también se termina la llamada aquí
+  connection.on('close', () => { if (current.connected) end(current, 'ended'); });
 }
 
 /** Graba ambas voces mezcladas en este dispositivo. */

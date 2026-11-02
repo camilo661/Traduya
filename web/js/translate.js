@@ -16,6 +16,14 @@ async function browserTranslator(from, to) {
 
 const translators = new Map();
 
+/** MyMemory a veces devuelve marcas internas (<bx id="…"/>) y entidades HTML (&#39;): se quitan. */
+function cleanText(text) {
+  const withoutTags = String(text ?? '').replace(/<\/?[a-z]+[^>]*>/gi, '');
+  const decoder = document.createElement('textarea');
+  decoder.innerHTML = withoutTags;
+  return decoder.value.replace(/\s+/g, ' ').trim();
+}
+
 /** [text] de [from] a [to] ('es', 'en' o 'zh'). Si falla, devuelve el texto original. */
 export async function translate(text, from, to) {
   if (!text || from === to) return text;
@@ -34,7 +42,7 @@ export async function translate(text, from, to) {
       const query = new URLSearchParams({ q: text, langpair: `${MYMEMORY_LANG[from]}|${MYMEMORY_LANG[to]}` });
       const response = await fetch(`https://api.mymemory.translated.net/get?${query}`);
       const json = await response.json();
-      if (json.responseStatus === 200 && !json.quotaFinished) result = json.responseData.translatedText;
+      if (json.responseStatus === 200 && !json.quotaFinished) result = cleanText(json.responseData.translatedText);
     } catch (e) { /* sin conexión */ }
   }
   result = result || text;
