@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.traduya.core.designsystem.component.TraduyaBackground
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.feature.wifinumber.WifiNumberUiState
 import com.traduya.feature.wifinumber.WifiNumberViewModel
@@ -47,7 +48,7 @@ internal fun WifiNumberScreen(
     onRegister: () -> Unit,
     onUnregister: () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+    TraduyaBackground {
         Column(
             modifier = Modifier
                 .safeDrawingPadding()

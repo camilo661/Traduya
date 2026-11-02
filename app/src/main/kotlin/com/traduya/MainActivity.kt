@@ -6,15 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.traduya.core.designsystem.component.TraduyaBackground
 import com.traduya.core.designsystem.theme.TraduyaTheme
 import com.traduya.feature.onboarding.OnboardingRoute
 import com.traduya.feature.wifinumber.WifiNumberActivity
@@ -37,11 +33,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TraduyaTheme {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                ) {
+                TraduyaBackground {
                     when (uiState) {
                         MainUiState.Loading -> Unit
                         MainUiState.NeedsOnboarding -> OnboardingRoute(
