@@ -31,6 +31,8 @@ private val avatarBackground = Brush.linearGradient(listOf(Color.White.copy(alph
 @Composable
 fun CallHeader(uiState: CallUiState, compact: Boolean) {
     val title = formatPhoneNumber(uiState.callerLabel)
+    // El teléfono debajo del nombre, si hay nombre (contacto guardado o persona registrada en la web)
+    val subtitle = formatPhoneNumber(uiState.number).takeIf { it.isNotBlank() && it != title }
     if (compact) {
         Row(
             modifier = Modifier
@@ -49,9 +51,11 @@ fun CallHeader(uiState: CallUiState, compact: Boolean) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = statusText(uiState),
+                    text = listOfNotNull(subtitle, statusText(uiState)).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -71,6 +75,10 @@ fun CallHeader(uiState: CallUiState, compact: Boolean) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            subtitle?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(text = it, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f))
+            }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = statusText(uiState),
