@@ -30,6 +30,7 @@ import androidx.webkit.WebViewAssetLoader
 import com.traduya.core.callui.CallScreen
 import com.traduya.core.designsystem.theme.TraduyaTheme
 import com.traduya.feature.internetcall.peer.PeerState
+import com.traduya.feature.internetcall.ui.CallSomeoneCard
 import com.traduya.feature.internetcall.ui.WaitingScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -66,7 +67,7 @@ class InternetCallActivity : ComponentActivity() {
                             .alpha(0f),
                     )
                     when (peerState) {
-                        is PeerState.Incoming, PeerState.InCall, PeerState.Ended -> CallScreen(
+                        is PeerState.Incoming, is PeerState.Dialing, PeerState.InCall, PeerState.Ended -> CallScreen(
                             uiState = callState,
                             onAnswer = viewModel::answer,
                             onHangUp = viewModel::hangUp,
@@ -84,6 +85,20 @@ class InternetCallActivity : ComponentActivity() {
                             onShare = ::shareLink,
                             onCopy = ::copyLink,
                             onBack = ::finish,
+                            callSomeone = {
+                                val canCall by viewModel.canCall.collectAsStateWithLifecycle()
+                                val number by viewModel.dialInput.collectAsStateWithLifecycle()
+                                val status by viewModel.targetStatus.collectAsStateWithLifecycle()
+                                val notice by viewModel.notice.collectAsStateWithLifecycle()
+                                CallSomeoneCard(
+                                    canCall = canCall,
+                                    number = number,
+                                    status = status,
+                                    notice = notice,
+                                    onNumberChange = viewModel::onDialInputChange,
+                                    onCall = viewModel::callNumber,
+                                )
+                            },
                         )
                     }
                 }
@@ -96,6 +111,10 @@ class InternetCallActivity : ComponentActivity() {
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context))
             .build()
+        // Solo en compilaciones de prueba: permite inspeccionar la página con las herramientas de Chrome
+        if (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
         return WebView(context).apply {
             settings.javaScriptEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false

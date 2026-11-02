@@ -48,6 +48,7 @@ internal fun WaitingScreen(
     onShare: () -> Unit,
     onCopy: () -> Unit,
     onBack: () -> Unit,
+    callSomeone: @Composable () -> Unit = {},
 ) {
     Box(
         Modifier
@@ -108,7 +109,9 @@ internal fun WaitingScreen(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
+            callSomeone()
+            Spacer(Modifier.height(16.dp))
             HowItWorks()
         }
     }
