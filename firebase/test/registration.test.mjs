@@ -1,69 +1,56 @@
-// Pruebas del registro con código de 6 dígitos (funciones sendRegistrationCode y confirmRegistration).
-// En el emulador el código no se envía por correo: la función lo devuelve como "debugCode".
+// Pruebas de las reglas del registro gratuito: borrador con Google → enlace del correo → ficha.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCS, auth, callFunction, signInWithGoogle, signUpAnonymous } from './emulator.mjs';
+import {
+  DOCS, auth, registeredCaller, signInWithEmailLink, signInWithGoogle, signUpAnonymous, writeDocument,
+} from './emulator.mjs';
 
-const reason = response => response.error?.details?.reason;
-const form = { fullName: 'Sarah Johnson', phone: '+1 (305) 555-0101', lang: 'es' };
+const profile = { fullName: 'Sarah Johnson', phone: '+13055550101' };
+const card = user => ({ ...profile, email: user.email, registeredAt: new Date() });
 
-test('registro completo: código correcto → ficha creada y cuenta marcada como registrada', async () => {
-  const user = await signInWithGoogle();
-  const sent = await callFunction('sendRegistrationCode', user, form);
-  assert.equal(sent.result.email, user.email);
-  assert.match(sent.result.debugCode, /^\d{6}$/);
+test('registro completo: borrador con Google y ficha con la sesión del enlace del correo', async () => {
+  const google = await signInWithGoogle();
+  assert.equal((await writeDocument(`pendingCallers/${google.uid}`, google, profile)).status, 200);
 
-  const confirmed = await callFunction('confirmRegistration', user, { code: sent.result.debugCode });
-  assert.deepEqual(confirmed.result, { registered: true });
-
-  const renewed = await signInWithGoogle({ id: user.id });
-  const claims = JSON.parse(Buffer.from(renewed.token.split('.')[1], 'base64url'));
-  assert.equal(claims.registered, true);
+  const link = await signInWithEmailLink(google.email);
+  assert.equal(link.uid, google.uid, 'el enlace entra a la misma cuenta');
+  const draft = await (await fetch(`${DOCS}/pendingCallers/${link.uid}`, { headers: auth(link) })).json();
+  assert.equal(draft.fields.fullName.stringValue, 'Sarah Johnson');
+  assert.equal((await writeDocument(`callers/${link.uid}`, link, card(link))).status, 200);
 
   // La app de quien recibe (usuario anónimo) puede leer la ficha
   const phone = await signUpAnonymous();
-  const caller = await (await fetch(`${DOCS}/callers/${user.uid}`, { headers: auth(phone) })).json();
-  assert.equal(caller.fields.fullName.stringValue, 'Sarah Johnson');
+  const caller = await (await fetch(`${DOCS}/callers/${google.uid}`, { headers: auth(phone) })).json();
   assert.equal(caller.fields.phone.stringValue, '+13055550101');
-  assert.equal(caller.fields.email.stringValue, user.email);
 });
 
-test('un código equivocado no registra y tras 5 intentos se bloquea', async () => {
-  const user = await signInWithGoogle();
-  const sent = await callFunction('sendRegistrationCode', user, form);
-  const wrong = sent.result.debugCode === '000000' ? '111111' : '000000';
-
-  for (let i = 0; i < 5; i++) {
-    assert.equal(reason(await callFunction('confirmRegistration', user, { code: wrong })), 'wrongCode');
-  }
-  const blocked = await callFunction('confirmRegistration', user, { code: sent.result.debugCode });
-  assert.equal(reason(blocked), 'tooManyAttempts');
-});
-
-test('pide nombre completo y teléfono con código de país', async () => {
-  const user = await signInWithGoogle();
-  assert.equal(reason(await callFunction('sendRegistrationCode', user, { ...form, fullName: 'Sarah' })), 'invalidName');
-  assert.equal(reason(await callFunction('sendRegistrationCode', user, { ...form, phone: '3055550101' })), 'invalidPhone');
-});
-
-test('no deja pedir otro código antes de un minuto', async () => {
-  const user = await signInWithGoogle();
-  await callFunction('sendRegistrationCode', user, form);
-  assert.equal(reason(await callFunction('sendRegistrationCode', user, form)), 'waitBeforeResend');
-});
-
-test('solo se registran cuentas de Google con sesión', async () => {
-  assert.equal(reason(await callFunction('sendRegistrationCode', null, form)), 'signInRequired');
+test('sin abrir el enlace del correo no se puede crear la ficha', async () => {
+  const google = await signInWithGoogle();
+  assert.equal((await writeDocument(`callers/${google.uid}`, google, card(google))).status, 403);
   const anonymous = await signUpAnonymous();
-  assert.equal(reason(await callFunction('sendRegistrationCode', anonymous, form)), 'googleRequired');
-  const unverified = await signInWithGoogle({ emailVerified: false });
-  assert.equal(reason(await callFunction('sendRegistrationCode', unverified, form)), 'googleRequired');
+  assert.equal((await writeDocument(`callers/${anonymous.uid}`, anonymous, card({ email: 'x@example.com' }))).status, 403);
 });
 
-test('quien ya está registrado no puede volver a registrarse', async () => {
-  const user = await signInWithGoogle();
-  const sent = await callFunction('sendRegistrationCode', user, form);
-  await callFunction('confirmRegistration', user, { code: sent.result.debugCode });
-  const renewed = await signInWithGoogle({ id: user.id });
-  assert.equal(reason(await callFunction('sendRegistrationCode', renewed, form)), 'alreadyRegistered');
+test('la ficha exige nombre completo, teléfono con país y el mismo correo de la sesión', async () => {
+  const link = await signInWithEmailLink((await signInWithGoogle()).email);
+  assert.equal((await writeDocument(`callers/${link.uid}`, link, { ...card(link), fullName: 'Sarah' })).status, 403);
+  assert.equal((await writeDocument(`callers/${link.uid}`, link, { ...card(link), phone: '3055550101' })).status, 403);
+  assert.equal((await writeDocument(`callers/${link.uid}`, link, { ...card(link), email: 'otro@example.com' })).status, 403);
+});
+
+test('nadie crea fichas a nombre de otra cuenta ni cambia una ficha ya creada', async () => {
+  const victim = await registeredCaller();
+  const intruder = await signInWithEmailLink((await signInWithGoogle()).email);
+  assert.equal((await writeDocument(`callers/${victim.uid}`, intruder, card(intruder))).status, 403);
+  const owner = await signInWithEmailLink(victim.email);
+  assert.equal((await writeDocument(`callers/${victim.uid}`, owner, { ...card(owner), fullName: 'Otra Persona' })).status, 403);
+});
+
+test('el borrador solo lo ve y lo escribe su dueño', async () => {
+  const owner = await signInWithGoogle();
+  const other = await signInWithGoogle();
+  await writeDocument(`pendingCallers/${owner.uid}`, owner, profile);
+  assert.equal((await fetch(`${DOCS}/pendingCallers/${owner.uid}`, { headers: auth(other) })).status, 403);
+  assert.equal((await writeDocument(`pendingCallers/${owner.uid}`, other, profile)).status, 403);
+  assert.equal((await writeDocument(`pendingCallers/${owner.uid}`, owner, { ...profile, phone: 'abc' })).status, 403);
 });

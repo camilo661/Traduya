@@ -1,8 +1,8 @@
 // Pruebas de las reglas del directorio de números y de las fichas de quien llama.
-// Uso (desde la raíz): firebase emulators:exec --only auth,firestore,functions --project demo-traduya "node --test firebase/test/"
+// Uso (desde la raíz): firebase emulators:exec --only auth,firestore --project demo-traduya "node --test firebase/test/"
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCS, JSON_HEADERS, auth, markRegistered, signInWithGoogle, signUpAnonymous } from './emulator.mjs';
+import { DOCS, JSON_HEADERS, auth, registeredCaller, signInWithGoogle, signUpAnonymous } from './emulator.mjs';
 
 function entry(owner, peerId) {
   return JSON.stringify({ fields: { owner: { stringValue: owner }, peerId: { stringValue: peerId } } });
@@ -22,7 +22,7 @@ test('un teléfono registra un número libre y quien se registró en la página 
   const number = randomNumber();
   assert.equal((await create(user, number)).status, 200);
 
-  const caller = await markRegistered(await signInWithGoogle());
+  const caller = await registeredCaller();
   const found = await (await fetch(docUrl(number), { headers: auth(caller) })).json();
   assert.equal(found.fields.peerId.stringValue, 'traduya-abcdefgh12345678');
 });
@@ -62,7 +62,7 @@ test('el dueño puede cambiar y borrar su número', async () => {
   });
   assert.equal(update.status, 200);
   assert.equal((await fetch(docUrl(number), { method: 'DELETE', headers: auth(owner) })).status, 200);
-  const caller = await markRegistered(await signInWithGoogle());
+  const caller = await registeredCaller();
   assert.equal((await fetch(docUrl(number), { headers: auth(caller) })).status, 404);
 });
 
@@ -79,16 +79,6 @@ test('rechaza registros a nombre de otro, sin sesión o con datos inválidos', a
 });
 
 test('no se puede descargar la lista de todos los números', async () => {
-  const caller = await markRegistered(await signInWithGoogle());
+  const caller = await registeredCaller();
   assert.equal((await fetch(`${DOCS}/numbers`, { headers: auth(caller) })).status, 403);
-});
-
-test('nadie puede escribir fichas de quien llama ni ver los códigos pendientes', async () => {
-  const caller = await markRegistered(await signInWithGoogle());
-  const forged = await fetch(`${DOCS}/callers?documentId=${caller.uid}`, {
-    method: 'POST', headers: auth(caller),
-    body: JSON.stringify({ fields: { fullName: { stringValue: 'Otra Persona' } } }),
-  });
-  assert.equal(forged.status, 403);
-  assert.equal((await fetch(`${DOCS}/registrations/${caller.uid}`, { headers: auth(caller) })).status, 403);
 });
