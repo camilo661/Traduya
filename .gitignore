@@ -14,9 +14,5 @@ build/
 # Registros del emulador de Firebase
 *-debug.log
 
-# Dependencias de las funciones de Firebase
-functions/node_modules/
-functions/.secret.local
-
 # Caché de los despliegues de Firebase
 .firebase/
