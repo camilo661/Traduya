@@ -1,12 +1,13 @@
 // Une la pantalla con la cuenta, el registro, el directorio y la llamada.
-// Pantallas: bienvenida → cuenta de Google → registro (si falta) → llamar.
-import { AUTO_CALL, LINK_TARGET, USE_EMULATOR } from './config.js';
+// Pantallas: bienvenida → cuenta de Google → registro (si falta) → teclado para llamar (solo por internet).
+import { AUTO_CALL, LINK_CODE, LINK_NUMBER, USE_EMULATOR } from './config.js';
 import { applyTranslations, currentLanguage, setLanguage, t } from './i18n.js';
 import { idToken, isRegistered, setAuthLanguage, signInWithGoogle, signOut, watchUser } from './auth.js';
 import { RegistrationError, confirm, requestCode } from './registration.js';
-import { countries, defaultCountry, internationalNumber } from './countries.js';
+import { countries, defaultCountry, dialCodeOf, internationalNumber, splitInternational } from './countries.js';
 import { CallError, fetchFullName, resolvePeerId } from './directory.js';
 import { hangUp, setMuted, startCall } from './call.js';
+import { createDialpad } from './dialpad.js';
 
 const $ = id => document.getElementById(id);
 const SCREENS = ['welcomeCard', 'googleCard', 'registerCard', 'callCard'];
@@ -20,7 +21,7 @@ const view = {
   registerIntro: null,
   registerMessage: null,
   codeSent: null,
-  status: LINK_TARGET ? message('callingTo', { target: LINK_TARGET }) : message('ready'),
+  status: LINK_CODE ? message('callingTo', { target: LINK_CODE }) : message('ready'),
   user: null,
   fullName: null,
 };
@@ -33,6 +34,7 @@ let timer = null;
 function show(screen) {
   view.screen = screen;
   SCREENS.forEach(id => $(id).classList.toggle('hidden', id !== screen));
+  document.body.classList.toggle('compact', screen === 'callCard');
   render();
 }
 
@@ -53,11 +55,12 @@ function render() {
   $('codeSentText').textContent = text(view.codeSent);
   $('status').textContent = text(view.status);
   $('sessionName').textContent = view.user ? t('signedInAs', { name: view.fullName || view.user.email }) : '';
-  renderCountries();
+  renderCountries($('countrySelect'));
+  renderCountries($('dialCountry'));
+  renderDialPrefix();
 }
 
-function renderCountries() {
-  const select = $('countrySelect');
+function renderCountries(select) {
   const selected = select.value || defaultCountry();
   select.innerHTML = '';
   countries(currentLanguage()).forEach(({ iso, dial, name }) => {
@@ -170,6 +173,44 @@ $('codeForm').onsubmit = async event => {
 
 // endregion
 
+// region Teclado para marcar
+
+const dialpad = createDialpad({
+  keypad: $('keypad'),
+  display: $('dialNumber'),
+  deleteButton: $('dialDelete'),
+  onChange: () => renderDialPrefix(),
+  onEnter: () => { if (!inCall) placeCall(); },
+});
+// El número del enlace se reparte entre el selector de país y el teclado
+if (LINK_NUMBER) {
+  const parts = splitInternational(LINK_NUMBER);
+  if (parts) {
+    renderCountries($('dialCountry'));
+    $('dialCountry').value = parts.iso;
+    dialpad.set(parts.local);
+  } else {
+    dialpad.set(LINK_NUMBER.replace(/[^0-9+]/g, ''));
+  }
+}
+
+/** El prefijo del país se muestra delante, salvo que el número ya empiece por "+". */
+function renderDialPrefix() {
+  const ownPrefix = dialpad.value.startsWith('+');
+  $('dialPrefix').textContent = ownPrefix ? '' : `+${dialCodeOf($('dialCountry').value)}`;
+  $('dialCountry').disabled = ownPrefix;
+}
+
+$('dialCountry').onchange = renderDialPrefix;
+
+/** Lo que se va a llamar: el número marcado (con su país) o el código de un enlace antiguo. */
+function dialTarget() {
+  if (dialpad.value.replace(/\D/g, '')) return internationalNumber($('dialCountry').value, dialpad.value);
+  return LINK_CODE;
+}
+
+// endregion
+
 // region Llamada
 
 function setStatus(key, values = {}) {
@@ -182,7 +223,8 @@ function setInCall(active) {
   $('callBox').classList.toggle('hidden', active);
   $('muteBox').classList.toggle('hidden', !active);
   $('hangBox').classList.toggle('hidden', !active);
-  $('targetInput').classList.toggle('hidden', active || Boolean(LINK_TARGET));
+  $('dialer').classList.toggle('hidden', active);
+  $('callTarget').classList.toggle('hidden', !active);
   $('signOutBtn').disabled = active;
   if (!active) {
     muted = false;
@@ -201,8 +243,9 @@ function startTimer() {
 }
 
 async function placeCall() {
-  const target = LINK_TARGET || $('targetInput').value.trim();
+  const target = dialTarget();
   if (!target) { setStatus('enterTarget'); return; }
+  $('callTarget').textContent = target;
   setInCall(true);
   setStatus('connecting');
   $('timer').textContent = '';
