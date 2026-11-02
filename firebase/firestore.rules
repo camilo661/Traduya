@@ -1,11 +1,16 @@
 rules_version = '2';
 
-// Directorio de números para llamadas por WiFi.
-// Para buscar un número hay que iniciar sesión con un correo verificado (Google o enlace por correo).
-// Nadie puede listar todos los números.
-// Solo el teléfono que registró un número (su usuario anónimo) puede cambiarlo o borrarlo.
+// Datos de Traduya en Firestore.
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isRegisteredCaller() {
+      // La marca la pone la función confirmRegistration al verificar el código enviado al Gmail
+      return request.auth != null && request.auth.token.registered == true;
+    }
+
+    // Directorio de números para llamadas por WiFi.
+    // Solo quien se registró en la página puede buscar un número, y nadie puede listarlos todos.
+    // Solo el teléfono que registró un número (su usuario anónimo) puede cambiarlo o borrarlo.
     match /numbers/{number} {
       function isValidEntry() {
         return request.resource.data.keys().hasOnly(['owner', 'peerId'])
@@ -14,7 +19,7 @@ service cloud.firestore {
           && request.resource.data.peerId.matches('^traduya-[a-z0-9]{16}$');
       }
 
-      allow get: if request.auth != null && request.auth.token.email_verified == true;
+      allow get: if isRegisteredCaller();
       allow list: if false;
       allow create: if request.auth != null
         && number.matches('^[+][1-9][0-9]{7,14}$')
@@ -26,6 +31,14 @@ service cloud.firestore {
         && resource.data.owner == request.auth.uid;
     }
 
+    // Ficha de quien llama (nombre completo, teléfono y correo). Solo la escriben las funciones;
+    // la app de quien recibe la lee para mostrar quién llama.
+    match /callers/{uid} {
+      allow get: if request.auth != null;
+      allow list, write: if false;
+    }
+
+    // Códigos de registro pendientes: solo los usan las funciones.
     match /{document=**} {
       allow read, write: if false;
     }
