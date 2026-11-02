@@ -18,9 +18,6 @@ export const FIREBASE_CONFIG = {
 
 export const AUTH_EMULATOR_URL = 'http://127.0.0.1:9099';
 
-/** Región de las funciones de registro (la misma que la base de datos). */
-export const FUNCTIONS_REGION = 'southamerica-east1';
-
 export const FIRESTORE_DOCUMENTS_URL = (USE_EMULATOR ? 'http://127.0.0.1:8080' : 'https://firestore.googleapis.com')
   + `/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 

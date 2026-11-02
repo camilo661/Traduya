@@ -1,10 +1,14 @@
-// Sesión de quien llama: se registra e inicia sesión con su cuenta de Google (Firebase Authentication).
+// Sesión de quien llama: entra con su cuenta de Google (Firebase Authentication) y confirma su registro
+// con el enlace que Firebase envía gratis a su Gmail.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
   GoogleAuthProvider,
   connectAuthEmulator,
   getAuth,
+  isSignInWithEmailLink,
   onAuthStateChanged,
+  sendSignInLinkToEmail,
+  signInWithEmailLink,
   signInWithPopup,
   signInWithRedirect,
   signOut as firebaseSignOut,
@@ -44,8 +48,63 @@ export const signOut = () => firebaseSignOut(auth);
 /** Token de la sesión actual: lo comprueba la app de quien recibe la llamada. */
 export const idToken = () => auth.currentUser.getIdToken();
 
-/** true si la cuenta terminó el registro (código verificado). [refresh] pide un token nuevo al servidor. */
-export async function isRegistered(refresh = false) {
-  const result = await auth.currentUser.getIdTokenResult(refresh);
-  return result.claims.registered === true;
+/** El usuario actual (o null). */
+export const currentUser = () => auth.currentUser;
+
+/**
+ * true si la sesión viene del enlace del correo: demuestra que la persona abrió su Gmail.
+ * Solo con esa sesión las reglas dejan crear la ficha de registro.
+ */
+export async function cameFromEmailLink() {
+  const result = await auth.currentUser.getIdTokenResult();
+  return result.signInProvider === 'password';
 }
+
+// region Enlace de confirmación
+
+const PENDING_EMAIL_KEY = 'traduya.pendingEmail';
+/** Parámetros de la página que se conservan al volver del enlace del correo. */
+const KEPT_PARAMS = ['n', 'to', 'emulator'];
+
+export async function sendConfirmationLink(email) {
+  await sendSignInLinkToEmail(auth, email, { url: pageUrl(), handleCodeInApp: true });
+  remember(PENDING_EMAIL_KEY, email);
+}
+
+export const isConfirmationLink = () => isSignInWithEmailLink(auth, location.href);
+
+/**
+ * Termina de entrar con el enlace del correo. [askEmail] se usa si el enlace se abrió en otro navegador
+ * y no sabemos el correo. Devuelve false si la persona no escribió el correo.
+ */
+export async function completeConfirmationLink(askEmail) {
+  const email = recall(PENDING_EMAIL_KEY) || askEmail();
+  if (!email) return false;
+  await signInWithEmailLink(auth, email.trim(), location.href);
+  forget(PENDING_EMAIL_KEY);
+  history.replaceState(null, '', pageUrl());
+  return true;
+}
+
+/** La dirección actual sin los parámetros que añade el enlace del correo. */
+function pageUrl() {
+  const current = new URLSearchParams(location.search);
+  const kept = new URLSearchParams();
+  KEPT_PARAMS.forEach(name => { if (current.has(name)) kept.set(name, current.get(name)); });
+  const query = kept.toString();
+  return location.origin + location.pathname + (query ? `?${query}` : '');
+}
+
+function remember(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* almacenamiento no disponible */ }
+}
+
+function recall(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function forget(key) {
+  try { localStorage.removeItem(key); } catch (e) { /* almacenamiento no disponible */ }
+}
+
+// endregion
