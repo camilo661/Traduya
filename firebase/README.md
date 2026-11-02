@@ -11,7 +11,10 @@ Todo funciona en el **plan gratuito Spark**, sin tarjeta y sin servidor: las reg
   - *Enlace por correo*: Firebase envía gratis a su Gmail un enlace «Confirmar registro». Al abrirlo, la sesión
     pasa a ser de tipo `password` y solo con ella las reglas dejan crear su ficha.
 - **Firestore**:
-  - `numbers/{+E164}` con `{ owner, peerId }`: el directorio de números.
+  - `numbers/{+E164}` con `{ owner, peerId, lastSeen }`: el directorio de números. `lastSeen` se renueva cada
+    40 s mientras el número puede recibir (activo si es de hace menos de 100 s).
+  - `appUsers/{uid}` con `{ phone }`: el número de cada teléfono con la app (para llamar y ser identificado).
+  - `callers/{uid}/calls/{id}` y `.../lines/{id}`: el historial privado de la web.
   - `pendingCallers/{uid}` con `{ fullName, phone }`: el borrador del registro mientras llega el enlace.
   - `callers/{uid}` con `{ fullName, phone, email, registeredAt }`: la ficha de quien llama.
 - **Reglas** ([firestore.rules](firestore.rules)): solo quien tiene ficha puede buscar un número; nadie puede

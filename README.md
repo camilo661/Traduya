@@ -23,7 +23,14 @@ y la traducción de lo que dices tú.
   Es gratis: no usa servidor ni tarjeta, las reglas de Firestore hacen cumplir el registro.
   Traduya comprueba el registro, muestra el nombre y el teléfono de quien llama y rechaza a quien no está registrado.
 - **Teclado para llamar en la web**: tras registrarse e iniciar sesión, la página abre un teclado (país + número)
-  para llamar solo por internet (WiFi o datos) a las personas que registraron su número en la app.
+  para llamar solo por internet (WiFi o datos) a otros números con Traduya.
+- **La web también recibe llamadas**: con la sesión iniciada y la página abierta, su número está **activo**
+  (luz verde; roja si no). Se puede llamar de la app a la web, de la web a la app y de web a web.
+- **Traducción en ambos sentidos**: cada lado envía el texto de su propia voz (la app con Vosk, la web con el
+  reconocimiento de voz del navegador) y quien lo recibe lo traduce a su idioma. La app además traduce el audio
+  que le llega, como siempre.
+- **Historial en la web**: cada llamada con lo que dijo la otra persona, traducido. La grabación (ambas voces)
+  se guarda en el mismo dispositivo.
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.
