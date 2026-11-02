@@ -21,6 +21,8 @@ y la traducción de lo que dices tú.
 - **Quien llama se registra**: en la página web (español, inglés y chino) hay que **registrarse** una vez con
   Google, nombre completo y teléfono con país (llega un código de 6 dígitos al Gmail) e **iniciar sesión**.
   Traduya comprueba el registro, muestra el nombre y el teléfono de quien llama y rechaza a quien no está registrado.
+- **Teclado para llamar en la web**: tras registrarse e iniciar sesión, la página abre un teclado (país + número)
+  para llamar solo por internet (WiFi o datos) a las personas que registraron su número en la app.
 - **App de teléfono predeterminada**: hace y recibe llamadas con su propia pantalla (`InCallService`).
 - **Traducción en vivo estilo karaoke**: solo en español, en letra grande, palabra a palabra mientras la otra persona habla.
 - **Reconocimiento de voz sin internet** con [Vosk](https://alphacephei.com/vosk/) y **traducción neuronal** con Google ML Kit, ambos dentro del teléfono.

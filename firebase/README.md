@@ -17,7 +17,8 @@ Las llamadas por WiFi usan un proyecto gratuito de Firebase (plan Spark), `tradu
   - `registrations/{uid}`: los códigos pendientes (solo las funciones; se guarda la huella, no el código).
 - **Reglas** ([firestore.rules](firestore.rules)): solo quien se registró puede buscar un número; nadie puede
   listarlos; solo el dueño puede cambiarlo o borrarlo; nadie puede escribir fichas ni ver códigos.
-- **Hosting**: la página para llamar ([`web/`](../web)) en <https://traduya-66592.web.app>.
+- **Hosting**: la página para llamar ([`web/`](../web)) en <https://traduya-66592.web.app>. Tras iniciar sesión
+  muestra un teclado (país + número) para llamar por internet a los números registrados en la app.
 
 La app de quien recibe comprueba el token de quien llama (`accounts:lookup`), exige la marca `registered`, lee
 su ficha y muestra su nombre y teléfono. Rechaza sin sonar las llamadas de cuentas sin registro.
