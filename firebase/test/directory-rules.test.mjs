@@ -1,36 +1,8 @@
-// Pruebas de las reglas del directorio de números contra el emulador de Firebase.
-// Uso (desde la raíz): firebase emulators:exec --only auth,firestore --project demo-traduya "node --test firebase/test/"
+// Pruebas de las reglas del directorio de números y de las fichas de quien llama.
+// Uso (desde la raíz): firebase emulators:exec --only auth,firestore,functions --project demo-traduya "node --test firebase/test/"
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-
-const PROJECT = 'demo-traduya';
-const AUTH = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
-const DOCS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
-
-async function signUp() {
-  const res = await fetch(`${AUTH}/accounts:signUp?key=fake`, {
-    method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ returnSecureToken: true }),
-  });
-  const json = await res.json();
-  return { uid: json.localId, token: json.idToken };
-}
-
-// Usuario de Google simulado (el emulador acepta tokens sin firmar)
-async function signInWithGoogle(emailVerified = true) {
-  const id = Math.random().toString(36).slice(2);
-  const idToken = JSON.stringify({ sub: 'g' + id, email: `caller-${id}@example.com`, email_verified: emailVerified });
-  const res = await fetch(`${AUTH}/accounts:signInWithIdp?key=fake`, {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify({
-      postBody: `providerId=google.com&id_token=${encodeURIComponent(idToken)}`,
-      requestUri: 'http://localhost', returnSecureToken: true,
-    }),
-  });
-  const json = await res.json();
-  return { uid: json.localId, token: json.idToken };
-}
+import { DOCS, JSON_HEADERS, auth, markRegistered, signInWithGoogle, signUpAnonymous } from './emulator.mjs';
 
 function entry(owner, peerId) {
   return JSON.stringify({ fields: { owner: { stringValue: owner }, peerId: { stringValue: peerId } } });
@@ -38,7 +10,6 @@ function entry(owner, peerId) {
 
 const randomNumber = () => '+57300' + Math.floor(1_000_000 + Math.random() * 8_999_999);
 const docUrl = number => `${DOCS}/numbers/${encodeURIComponent(number)}`;
-const auth = user => ({ ...JSON_HEADERS, Authorization: `Bearer ${user.token}` });
 
 function create(user, number, peerId = 'traduya-abcdefgh12345678', owner = user.uid) {
   return fetch(`${DOCS}/numbers?documentId=${encodeURIComponent(number)}`, {
@@ -46,30 +17,30 @@ function create(user, number, peerId = 'traduya-abcdefgh12345678', owner = user.
   });
 }
 
-test('un teléfono registra un número libre y quien inició sesión lo puede buscar', async () => {
-  const user = await signUp();
+test('un teléfono registra un número libre y quien se registró en la página lo puede buscar', async () => {
+  const user = await signUpAnonymous();
   const number = randomNumber();
   assert.equal((await create(user, number)).status, 200);
 
-  const caller = await signInWithGoogle();
+  const caller = await markRegistered(await signInWithGoogle());
   const found = await (await fetch(docUrl(number), { headers: auth(caller) })).json();
   assert.equal(found.fields.peerId.stringValue, 'traduya-abcdefgh12345678');
 });
 
-test('sin sesión, anónimo o con correo sin verificar no se puede buscar un número', async () => {
-  const owner = await signUp();
+test('sin registrarse no se puede buscar un número, aunque haya iniciado sesión con Google', async () => {
+  const owner = await signUpAnonymous();
   const number = randomNumber();
   await create(owner, number);
 
   assert.equal((await fetch(docUrl(number))).status, 403);
   assert.equal((await fetch(docUrl(number), { headers: auth(owner) })).status, 403);
-  const unverified = await signInWithGoogle(false);
-  assert.equal((await fetch(docUrl(number), { headers: auth(unverified) })).status, 403);
+  const notRegistered = await signInWithGoogle();
+  assert.equal((await fetch(docUrl(number), { headers: auth(notRegistered) })).status, 403);
 });
 
 test('nadie puede quitarle el número a quien lo registró', async () => {
-  const owner = await signUp();
-  const intruder = await signUp();
+  const owner = await signUpAnonymous();
+  const intruder = await signUpAnonymous();
   const number = randomNumber();
   await create(owner, number);
 
@@ -82,7 +53,7 @@ test('nadie puede quitarle el número a quien lo registró', async () => {
 });
 
 test('el dueño puede cambiar y borrar su número', async () => {
-  const owner = await signUp();
+  const owner = await signUpAnonymous();
   const number = randomNumber();
   await create(owner, number);
 
@@ -91,12 +62,12 @@ test('el dueño puede cambiar y borrar su número', async () => {
   });
   assert.equal(update.status, 200);
   assert.equal((await fetch(docUrl(number), { method: 'DELETE', headers: auth(owner) })).status, 200);
-  const caller = await signInWithGoogle();
+  const caller = await markRegistered(await signInWithGoogle());
   assert.equal((await fetch(docUrl(number), { headers: auth(caller) })).status, 404);
 });
 
 test('rechaza registros a nombre de otro, sin sesión o con datos inválidos', async () => {
-  const user = await signUp();
+  const user = await signUpAnonymous();
   assert.equal((await create(user, randomNumber(), undefined, 'otro-usuario')).status, 403);
   assert.equal((await create(user, '3001234567')).status, 403);
   assert.equal((await create(user, randomNumber(), 'cualquier-cosa')).status, 403);
@@ -108,6 +79,16 @@ test('rechaza registros a nombre de otro, sin sesión o con datos inválidos', a
 });
 
 test('no se puede descargar la lista de todos los números', async () => {
-  const caller = await signInWithGoogle();
+  const caller = await markRegistered(await signInWithGoogle());
   assert.equal((await fetch(`${DOCS}/numbers`, { headers: auth(caller) })).status, 403);
+});
+
+test('nadie puede escribir fichas de quien llama ni ver los códigos pendientes', async () => {
+  const caller = await markRegistered(await signInWithGoogle());
+  const forged = await fetch(`${DOCS}/callers?documentId=${caller.uid}`, {
+    method: 'POST', headers: auth(caller),
+    body: JSON.stringify({ fields: { fullName: { stringValue: 'Otra Persona' } } }),
+  });
+  assert.equal(forged.status, 403);
+  assert.equal((await fetch(`${DOCS}/registrations/${caller.uid}`, { headers: auth(caller) })).status, 403);
 });
