@@ -24,8 +24,11 @@ export const FUNCTIONS_REGION = 'southamerica-east1';
 export const FIRESTORE_DOCUMENTS_URL = (USE_EMULATOR ? 'http://127.0.0.1:8080' : 'https://firestore.googleapis.com')
   + `/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 
-/** A quién se llama, si viene en el enlace: ?n=+57… (número) o ?to=abc123 (código). */
-export const LINK_TARGET = (params.get('n') || params.get('to') || '').trim();
+/** Número que viene en el enlace (?n=+57…): se pone en el teclado. */
+export const LINK_NUMBER = (params.get('n') || '').trim();
+
+/** Código que viene en un enlace antiguo (?to=abc123): se llama sin marcar. */
+export const LINK_CODE = (params.get('to') || '').trim();
 
 /** Servidores para que la llamada atraviese routers y redes móviles. */
 export const ICE_SERVERS = [
