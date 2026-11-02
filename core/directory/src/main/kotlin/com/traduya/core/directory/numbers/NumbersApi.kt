@@ -5,6 +5,7 @@ import com.traduya.core.directory.http.JsonHttp
 import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
+import javax.inject.Inject
 
 /** El servidor no aceptó el token de la sesión. */
 internal class UnauthorizedException : IOException("Sesión no aceptada")
@@ -16,7 +17,7 @@ internal enum class ClaimResult { CLAIMED, TAKEN }
  * Colección "numbers" de Firestore: cada documento se llama como el número (E.164)
  * y guarda su dueño y el identificador de la conexión WebRTC.
  */
-internal class NumbersApi(private val config: FirebaseConfig) {
+internal class NumbersApi @Inject constructor(private val config: FirebaseConfig) {
 
     suspend fun claim(number: String, peerId: String, ownerUid: String, token: String): ClaimResult {
         val created = JsonHttp.request(
@@ -36,7 +37,8 @@ internal class NumbersApi(private val config: FirebaseConfig) {
     suspend fun release(number: String, token: String) {
         val response = JsonHttp.request("DELETE", documentUrl(number), bearerToken = token)
         if (response.code == HTTP_UNAUTHORIZED) throw UnauthorizedException()
-        if (!response.isSuccess && response.code != HTTP_NOT_FOUND) {
+        // 404: ya no existe. 403: ya no es nuestro (las reglas solo dejan borrar al dueño). En ambos casos está liberado.
+        if (!response.isSuccess && response.code != HTTP_NOT_FOUND && response.code != HTTP_FORBIDDEN) {
             throw IOException("No se pudo borrar el número (${response.code})")
         }
     }

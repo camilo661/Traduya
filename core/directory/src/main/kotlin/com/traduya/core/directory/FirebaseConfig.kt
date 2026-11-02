@@ -13,8 +13,13 @@ internal data class FirebaseConfig(
 ) {
     val isConfigured: Boolean get() = projectId.isNotBlank() && apiKey.isNotBlank()
 
+    private val documentsUrl: String get() = "$firestoreUrl/v1/projects/$projectId/databases/(default)/documents"
+
     /** Ruta de la colección de números en la API REST de Firestore. */
-    val numbersUrl: String get() = "$firestoreUrl/v1/projects/$projectId/databases/(default)/documents/numbers"
+    val numbersUrl: String get() = "$documentsUrl/numbers"
+
+    /** Ruta de las fichas de quien llama (nombre completo y teléfono). */
+    val callersUrl: String get() = "$documentsUrl/callers"
 
     companion object {
         private const val EMULATOR_PROJECT_ID = "demo-traduya"

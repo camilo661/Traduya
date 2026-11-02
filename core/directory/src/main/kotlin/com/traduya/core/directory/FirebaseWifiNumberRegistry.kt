@@ -23,12 +23,12 @@ import javax.inject.Singleton
 @Singleton
 internal class FirebaseWifiNumberRegistry @Inject constructor(
     @ApplicationContext context: Context,
+    private val config: FirebaseConfig,
+    private val session: AnonymousSession,
+    private val numbers: NumbersApi,
 ) : WifiNumberRegistry {
 
-    private val config = FirebaseConfig.fromBuildConfig()
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val session = AnonymousSession(config, prefs)
-    private val numbers = NumbersApi(config)
+    private val prefs = context.getSharedPreferences(DirectoryModule.PREFS_NAME, Context.MODE_PRIVATE)
 
     override val isConfigured: Boolean get() = config.isConfigured
 
@@ -90,7 +90,6 @@ internal class FirebaseWifiNumberRegistry @Inject constructor(
 
     private companion object {
         const val TAG = "TraduyaDirectory"
-        const val PREFS_NAME = "wifi_number"
         const val KEY_NUMBER = "number"
         const val KEY_PEER_ID = "peer_id"
         const val PEER_PREFIX = "traduya-"
