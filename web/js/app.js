@@ -1,19 +1,24 @@
-// Une la pantalla con la cuenta, el registro, el directorio y la llamada.
-// Pantallas: bienvenida → cuenta de Google → registro (si falta) → teclado para llamar (solo por internet).
+// Une la pantalla con la cuenta, el registro y el teléfono (phone.js).
+// Pantallas: bienvenida → cuenta de Google → registro (si falta) → teclado e historial,
+// y además llamada entrante y llamada en curso con la traducción en vivo.
 import { AUTO_CALL, LINK_CODE, LINK_NUMBER } from './config.js';
 import { applyTranslations, currentLanguage, setLanguage, t } from './i18n.js';
 import {
   cameFromEmailLink, completeConfirmationLink, currentUser, idToken, isConfirmationLink, sendConfirmationLink,
   setAuthLanguage, signInWithGoogle, signOut, watchUser,
 } from './auth.js';
-import { RegistrationError, finishRegistration, fullNameOf, isRegistered, saveDraft, validateProfile } from './registration.js';
+import { RegistrationError, finishRegistration, isRegistered, profileOf, saveDraft, validateProfile } from './registration.js';
 import { countries, defaultCountry, dialCodeOf, internationalNumber, splitInternational } from './countries.js';
-import { CallError, resolvePeerId } from './directory.js';
-import { hangUp, setMuted, startCall } from './call.js';
+import { CallError, lookupNumber, normalizeNumber } from './directory.js';
+import { answer, call, decline, hangUp, setMuted, startPhone, stopPhone } from './phone.js';
 import { createDialpad } from './dialpad.js';
+import { listCalls, listLines } from './history.js';
+import { getRecording } from './recordings.js';
+import * as callView from './ui/call-view.js';
+import * as historyView from './ui/history-view.js';
 
 const $ = id => document.getElementById(id);
-const SCREENS = ['welcomeCard', 'googleCard', 'registerCard', 'callCard'];
+const SCREENS = ['welcomeCard', 'googleCard', 'registerCard', 'callCard', 'incomingCard', 'inCallCard'];
 
 // Los mensajes se guardan como clave + valores para volver a traducirlos si cambia el idioma
 const message = (key, values = {}) => (key ? { key, values } : null);
@@ -26,18 +31,23 @@ const view = {
   linkSent: null,
   status: LINK_CODE ? message('callingTo', { target: LINK_CODE }) : message('ready'),
   user: null,
-  fullName: null,
+  profile: null,
+  presence: null,        // 'online' | 'offline' | 'taken'
+  target: null,          // estado del número marcado: 'on' | 'off' | 'unknown'
+  hint: null,
+  peer: null,            // con quién es la llamada en curso: { name, phone }
+  languages: null,       // { from, to } de la llamada en curso
 };
 let inCall = false;
 let muted = false;
-let timer = null;
 
 // region Pantalla e idioma
 
 function show(screen) {
   view.screen = screen;
   SCREENS.forEach(id => $(id).classList.toggle('hidden', id !== screen));
-  document.body.classList.toggle('compact', screen === 'callCard');
+  document.body.classList.toggle('compact', ['callCard', 'incomingCard', 'inCallCard'].includes(screen));
+  document.body.classList.toggle('calling', ['incomingCard', 'inCallCard'].includes(screen));
   render();
 }
 
@@ -57,7 +67,12 @@ function render() {
   $('registerMessage').textContent = text(view.registerMessage);
   $('linkSentText').textContent = text(view.linkSent);
   $('status').textContent = text(view.status);
-  $('sessionName').textContent = view.user ? t('signedInAs', { name: view.fullName || view.user.email }) : '';
+  $('sessionName').textContent = view.user ? t('signedInAs', { name: view.profile?.fullName || view.user.email }) : '';
+  renderPresence();
+  renderTarget();
+  callView.setHint(text(view.hint));
+  callView.setLanguages(view.languages
+    ? t('translating', { from: t(`lang_${view.languages.from}`), to: t(`lang_${view.languages.to}`) }) : '');
   renderCountries($('countrySelect'));
   renderCountries($('dialCountry'));
   renderDialPrefix();
@@ -102,7 +117,9 @@ const onUser = user => { handling = handling.then(() => handleUser(user)).catch(
 async function handleUser(user) {
   view.user = user;
   if (!user) {
-    view.fullName = null;
+    stopPhone();
+    view.profile = null;
+    view.presence = null;
     show(view.screen === 'googleCard' ? 'googleCard' : 'welcomeCard');
     return;
   }
@@ -126,9 +143,15 @@ async function handleUser(user) {
 
 watchUser(onUser);
 
+/** Con el registro completo: abre el teclado y empieza a recibir llamadas en su número. */
 async function enterCallScreen() {
-  view.fullName = await fullNameOf(view.user.uid, await idToken()).catch(() => null);
+  view.profile = await profileOf(view.user.uid, await idToken()).catch(() => null);
   show('callCard');
+  if (view.profile) {
+    await startPhone({
+      uid: view.user.uid, profile: view.profile, getToken: idToken, lang: currentLanguage, ui: phoneUi,
+    });
+  }
   if (AUTO_CALL && !inCall) placeCall();
 }
 
@@ -203,7 +226,7 @@ const dialpad = createDialpad({
   keypad: $('keypad'),
   display: $('dialNumber'),
   deleteButton: $('dialDelete'),
-  onChange: () => renderDialPrefix(),
+  onChange: () => { renderDialPrefix(); checkTarget(); },
   onEnter: () => { if (!inCall) placeCall(); },
 });
 // El número del enlace se reparte entre el selector de país y el teclado
@@ -225,7 +248,41 @@ function renderDialPrefix() {
   $('dialCountry').disabled = ownPrefix;
 }
 
-$('dialCountry').onchange = renderDialPrefix;
+$('dialCountry').onchange = () => { renderDialPrefix(); checkTarget(); };
+
+/** Luz del número marcado: verde si está activo, roja si no, gris si no está en Traduya. */
+let targetCheck = 0;
+function checkTarget() {
+  const number = dialpad.value.replace(/\D/g, '').length >= 7 ? normalizeNumber(dialTarget()) : null;
+  const turn = ++targetCheck;
+  view.target = null;
+  renderTarget();
+  if (!number || !view.user) return;
+  setTimeout(async () => {
+    if (turn !== targetCheck) return;
+    const entry = await lookupNumber(number, await idToken()).catch(() => undefined);
+    if (turn !== targetCheck || entry === undefined) return;
+    view.target = entry ? (entry.active ? 'on' : 'off') : 'unknown';
+    renderTarget();
+  }, 450);
+}
+
+function renderTarget() {
+  $('targetStatus').classList.toggle('hidden', !view.target);
+  if (!view.target) return;
+  $('targetStatus').querySelector('.dot').className = `dot ${view.target === 'unknown' ? '' : view.target}`;
+  $('targetStatusText').textContent = t({ on: 'targetActive', off: 'targetInactive', unknown: 'targetUnknown' }[view.target]);
+}
+
+function renderPresence() {
+  const pill = $('presence');
+  pill.classList.toggle('hidden', !view.presence);
+  if (!view.presence) return;
+  pill.querySelector('.dot').className = `dot ${view.presence === 'online' ? 'on' : 'off'}`;
+  $('presenceText').textContent = view.presence === 'online'
+    ? t('online', { phone: view.profile?.phone ?? '' })
+    : t(view.presence === 'taken' ? 'numberTaken' : 'offline');
+}
 
 /** Lo que se va a llamar: el número marcado (con su país) o el código de un enlace antiguo. */
 function dialTarget() {
@@ -235,60 +292,100 @@ function dialTarget() {
 
 // endregion
 
-// region Llamada
+// region Pestañas Teclado / Historial
+
+document.querySelectorAll('[data-tab]').forEach(button => {
+  button.onclick = () => {
+    document.querySelectorAll('[data-tab]').forEach(tab => {
+      tab.classList.toggle('active', tab === button);
+      $(tab.dataset.tab).classList.toggle('hidden', tab !== button);
+    });
+    if (button.dataset.tab === 'historyTab') loadHistory();
+  };
+});
+
+async function loadHistory() {
+  if (!view.user) return;
+  const calls = await listCalls(view.user.uid, await idToken()).catch(() => []);
+  historyView.renderList(calls, currentLanguage(), t, openCall);
+}
+
+async function openCall(entry) {
+  const token = await idToken();
+  const [lines, recording] = await Promise.all([
+    listLines(view.user.uid, token, entry.id).catch(() => []),
+    getRecording(entry.id),
+  ]);
+  historyView.renderDetail(entry, lines, recording, currentLanguage(), t);
+}
+
+$('historyBackBtn').onclick = () => historyView.showList();
+
+// endregion
+
+// region Llamadas (entrantes y salientes)
 
 function setStatus(key, values = {}) {
   view.status = message(key, values);
   render();
 }
 
-function setInCall(active) {
-  inCall = active;
-  $('callBox').classList.toggle('hidden', active);
-  $('muteBox').classList.toggle('hidden', !active);
-  $('hangBox').classList.toggle('hidden', !active);
-  $('dialer').classList.toggle('hidden', active);
-  $('callTarget').classList.toggle('hidden', !active);
-  $('signOutBtn').disabled = active;
-  if (!active) {
+/** Lo que el teléfono (phone.js) le pide a la pantalla. */
+const phoneUi = {
+  onPresence: state => { view.presence = state; render(); },
+  onIncoming: caller => {
+    $('incomingAvatar').textContent = (caller.name || '?').charAt(0).toUpperCase();
+    $('incomingName').textContent = caller.name;
+    $('incomingPhone').textContent = caller.name !== caller.phone ? caller.phone : '';
+    navigator.vibrate?.([400, 200, 400]);
+    show('incomingCard');
+  },
+  onIncomingCancelled: () => show('callCard'),
+  onCallStarted: peer => {
+    inCall = true;
     muted = false;
     $('muteBtn').classList.remove('on');
-    clearInterval(timer);
-  }
-}
-
-function startTimer() {
-  const start = Date.now();
-  clearInterval(timer);
-  timer = setInterval(() => {
-    const seconds = Math.floor((Date.now() - start) / 1000);
-    $('timer').textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-  }, 500);
-}
+    view.languages = null;
+    view.hint = message('connecting');
+    view.peer = peer;
+    callView.showPeer(peer);
+    show('inCallCard');
+  },
+  onStatus: key => { view.hint = message(key); render(); },
+  onConnected: () => {
+    view.hint = message('listening');
+    callView.startTimer(view.peer?.phone);
+    render();
+  },
+  onLanguages: (from, to) => { view.languages = { from, to }; render(); },
+  onLive: translated => callView.setLive(translated),
+  onLine: line => callView.addLine(line),
+  onEnded: key => {
+    inCall = false;
+    callView.stopTimer();
+    view.languages = null;
+    view.hint = null;
+    setStatus(key);
+    show('callCard');
+  },
+  onHistoryChanged: () => { if (!$('historyTab').classList.contains('hidden')) loadHistory(); },
+};
 
 async function placeCall() {
   const target = dialTarget();
   if (!target) { setStatus('enterTarget'); return; }
-  $('callTarget').textContent = target;
-  setInCall(true);
   setStatus('connecting');
-  $('timer').textContent = '';
   try {
-    const token = await idToken();
-    const peerId = await resolvePeerId(target, token);
-    await startCall(peerId, token, {
-      onStatus: setStatus,
-      onConnected: () => { setStatus('connected'); startTimer(); },
-      onEnded: key => { setInCall(false); setStatus(key); },
-    });
+    await call(target);
   } catch (error) {
-    setInCall(false);
     setStatus(error instanceof CallError ? error.messageKey : 'connectionError');
   }
 }
 
 $('callBtn').onclick = placeCall;
-$('hangBtn').onclick = () => { hangUp(); setInCall(false); setStatus('ended'); };
+$('answerBtn').onclick = () => answer();
+$('declineBtn').onclick = () => { decline(); show('callCard'); };
+$('hangBtn').onclick = () => hangUp();
 $('muteBtn').onclick = () => {
   muted = !muted;
   $('muteBtn').classList.toggle('on', muted);
@@ -297,5 +394,4 @@ $('muteBtn').onclick = () => {
 
 // endregion
 
-setInCall(false);
 render();
