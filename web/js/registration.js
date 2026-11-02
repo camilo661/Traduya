@@ -26,8 +26,9 @@ export async function isRegistered(uid, idToken) {
   return (await getDocument(`callers/${uid}`, idToken)) !== null;
 }
 
-export async function fullNameOf(uid, idToken) {
-  return (await getDocument(`callers/${uid}`, idToken))?.fullName ?? null;
+/** La ficha de la cuenta: { fullName, phone }, o null si no está registrada. */
+export async function profileOf(uid, idToken) {
+  return getDocument(`callers/${uid}`, idToken);
 }
 
 /** Guarda el borrador para terminar el registro aunque el enlace se abra en otro navegador. */
