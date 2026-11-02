@@ -20,23 +20,57 @@
   <h1>Traduya</h1>
   <p class="sub" data-i18n="subtitle"></p>
 
-  <!-- Paso 1: iniciar sesión (obligatorio para llamar) -->
-  <section class="card hidden" id="loginCard">
-    <h2 data-i18n="loginTitle"></h2>
-    <p class="muted" data-i18n="loginWhy"></p>
+  <!-- 1. Bienvenida: registrarse o iniciar sesión (obligatorio para llamar) -->
+  <section class="card hidden" id="welcomeCard">
+    <h2 data-i18n="welcomeTitle"></h2>
+    <p class="muted" data-i18n="welcomeWhy"></p>
+    <button class="wide primary" id="registerBtn" data-i18n="register"></button>
+    <button class="wide secondary" id="signInBtn" data-i18n="signIn"></button>
+  </section>
+
+  <!-- 2. Elegir la cuenta de Google -->
+  <section class="card hidden" id="googleCard">
+    <h2 id="googleTitle"></h2>
+    <p class="muted" id="googleHint"></p>
     <button class="wide google" id="googleBtn">
       <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.3 0-11.6-4.1-13.5-9.8l-7.9 6C6.6 42.6 14.6 48 24 48z"/></svg>
       <span data-i18n="google"></span>
     </button>
-    <div class="divider"><span data-i18n="or"></span></div>
-    <form id="emailForm">
-      <input id="emailInput" type="email" autocomplete="email" data-i18n-placeholder="emailPlaceholder" required>
-      <button class="wide secondary" type="submit" data-i18n="sendLink"></button>
-    </form>
-    <p class="message" id="loginMessage"></p>
+    <button class="link" id="backBtn" data-i18n="back"></button>
+    <p class="message" id="googleMessage"></p>
   </section>
 
-  <!-- Paso 2: llamar -->
+  <!-- 3. Registro: nombre completo, teléfono y código enviado al Gmail -->
+  <section class="card form hidden" id="registerCard">
+    <h2 data-i18n="registerTitle"></h2>
+    <p class="muted" id="registerIntro"></p>
+
+    <form id="profileForm">
+      <label for="fullNameInput" data-i18n="fullNameLabel"></label>
+      <input id="fullNameInput" autocomplete="name" required>
+      <label for="countrySelect" data-i18n="countryLabel"></label>
+      <select id="countrySelect"></select>
+      <label for="phoneInput" data-i18n="phoneLabel"></label>
+      <input id="phoneInput" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="300 123 4567" required>
+      <button class="wide primary" type="submit" id="sendCodeBtn" data-i18n="sendCode"></button>
+    </form>
+
+    <form id="codeForm" class="hidden">
+      <p class="muted" id="codeSentText"></p>
+      <label for="codeInput" data-i18n="codeLabel"></label>
+      <input id="codeInput" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+      <button class="wide primary" type="submit" id="confirmBtn" data-i18n="confirm"></button>
+      <div class="links">
+        <button class="link" type="button" id="resendBtn" data-i18n="resend"></button>
+        <button class="link" type="button" id="changeDataBtn" data-i18n="changeData"></button>
+      </div>
+    </form>
+
+    <p class="message" id="registerMessage"></p>
+    <button class="link" id="otherAccountBtn" data-i18n="useOtherAccount"></button>
+  </section>
+
+  <!-- 4. Llamar -->
   <section class="card hidden" id="callCard">
     <div class="session">
       <span id="sessionName"></span>
@@ -75,7 +109,7 @@
   <section class="card how">
     <h2 data-i18n="howTitle"></h2>
     <ol>
-      <li data-i18n="loginTitle"></li>
+      <li data-i18n="howRegister"></li>
       <li data-i18n="step1"></li>
       <li data-i18n="step2"></li>
       <li data-i18n="step3"></li>

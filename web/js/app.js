@@ -1,25 +1,42 @@
-// Une la pantalla con el inicio de sesión, el directorio y la llamada.
-import { AUTO_CALL, LINK_TARGET } from './config.js';
+// Une la pantalla con la cuenta, el registro, el directorio y la llamada.
+// Pantallas: bienvenida → cuenta de Google → registro (si falta) → llamar.
+import { AUTO_CALL, LINK_TARGET, USE_EMULATOR } from './config.js';
 import { applyTranslations, currentLanguage, setLanguage, t } from './i18n.js';
-import {
-  completeEmailLinkSignIn, idToken, sendEmailLink, setAuthLanguage, signInWithGoogle, signOut, watchUser,
-} from './auth.js';
-import { CallError, resolvePeerId } from './directory.js';
+import { idToken, isRegistered, setAuthLanguage, signInWithGoogle, signOut, watchUser } from './auth.js';
+import { RegistrationError, confirm, requestCode } from './registration.js';
+import { countries, defaultCountry, internationalNumber } from './countries.js';
+import { CallError, fetchFullName, resolvePeerId } from './directory.js';
 import { hangUp, setMuted, startCall } from './call.js';
 
 const $ = id => document.getElementById(id);
+const SCREENS = ['welcomeCard', 'googleCard', 'registerCard', 'callCard'];
 
 // Los mensajes se guardan como clave + valores para volver a traducirlos si cambia el idioma
+const message = (key, values = {}) => (key ? { key, values } : null);
 const view = {
-  status: LINK_TARGET ? { key: 'callingTo', values: { target: LINK_TARGET } } : { key: 'ready', values: {} },
-  loginMessage: null,
+  screen: null,
+  googleIntent: 'register', // 'register' o 'signIn'
+  googleMessage: null,
+  registerIntro: null,
+  registerMessage: null,
+  codeSent: null,
+  status: LINK_TARGET ? message('callingTo', { target: LINK_TARGET }) : message('ready'),
   user: null,
+  fullName: null,
 };
 let inCall = false;
 let muted = false;
 let timer = null;
 
-// region Idioma
+// region Pantalla e idioma
+
+function show(screen) {
+  view.screen = screen;
+  SCREENS.forEach(id => $(id).classList.toggle('hidden', id !== screen));
+  render();
+}
+
+const text = msg => (msg ? t(msg.key, msg.values) : '');
 
 function render() {
   applyTranslations();
@@ -27,9 +44,25 @@ function render() {
   document.querySelectorAll('[data-lang]').forEach(button => {
     button.classList.toggle('active', button.dataset.lang === currentLanguage());
   });
-  $('status').textContent = t(view.status.key, view.status.values);
-  $('loginMessage').textContent = view.loginMessage ? t(view.loginMessage.key, view.loginMessage.values) : '';
-  if (view.user) $('sessionName').textContent = t('signedInAs', { name: view.user.displayName || view.user.email });
+  const registering = view.googleIntent === 'register';
+  $('googleTitle').textContent = t(registering ? 'registerTitle' : 'signInTitle');
+  $('googleHint').textContent = t(registering ? 'registerGoogleHint' : 'signInHint');
+  $('googleMessage').textContent = text(view.googleMessage);
+  $('registerIntro').textContent = text(view.registerIntro);
+  $('registerMessage').textContent = text(view.registerMessage);
+  $('codeSentText').textContent = text(view.codeSent);
+  $('status').textContent = text(view.status);
+  $('sessionName').textContent = view.user ? t('signedInAs', { name: view.fullName || view.user.email }) : '';
+  renderCountries();
+}
+
+function renderCountries() {
+  const select = $('countrySelect');
+  const selected = select.value || defaultCountry();
+  select.innerHTML = '';
+  countries(currentLanguage()).forEach(({ iso, dial, name }) => {
+    select.add(new Option(`${name} (+${dial})`, iso, false, iso === selected));
+  });
 }
 
 document.querySelectorAll('[data-lang]').forEach(button => {
@@ -38,48 +71,109 @@ document.querySelectorAll('[data-lang]').forEach(button => {
 
 // endregion
 
-// region Sesión
+// region Cuenta de Google
 
-function setLoginMessage(key, values = {}) {
-  view.loginMessage = key ? { key, values } : null;
+function chooseGoogle(intent) {
+  view.googleIntent = intent;
+  view.googleMessage = null;
+  show('googleCard');
+}
+
+$('registerBtn').onclick = () => chooseGoogle('register');
+$('signInBtn').onclick = () => chooseGoogle('signIn');
+$('backBtn').onclick = () => show('welcomeCard');
+$('googleBtn').onclick = () => {
+  view.googleMessage = null;
+  signInWithGoogle().catch(() => { view.googleMessage = message('signInError'); render(); });
+};
+$('otherAccountBtn').onclick = () => signOut();
+$('signOutBtn').onclick = () => { if (!inCall) signOut(); };
+
+watchUser(async user => {
+  view.user = user;
+  if (!user) {
+    view.fullName = null;
+    show(view.screen === 'googleCard' ? 'googleCard' : 'welcomeCard');
+    return;
+  }
+  if (await isRegistered()) {
+    await enterCallScreen();
+    return;
+  }
+  // Tiene cuenta de Google pero no terminó el registro
+  view.registerIntro = view.googleIntent === 'signIn' ? message('notRegisteredYet', { email: user.email }) : null;
+  $('fullNameInput').value ||= user.displayName ?? '';
+  showProfileStep();
+  show('registerCard');
+});
+
+async function enterCallScreen() {
+  view.fullName = await fetchFullName(view.user.uid, await idToken()).catch(() => null);
+  show('callCard');
+  if (AUTO_CALL && !inCall) placeCall();
+}
+
+// endregion
+
+// region Registro con código
+
+function showProfileStep() {
+  $('profileForm').classList.remove('hidden');
+  $('codeForm').classList.add('hidden');
+}
+
+function setRegisterMessage(key, values) {
+  view.registerMessage = message(key, values);
   render();
 }
 
-$('googleBtn').onclick = () => {
-  setLoginMessage(null);
-  signInWithGoogle().catch(() => setLoginMessage('signInError'));
-};
-
-$('emailForm').onsubmit = async event => {
-  event.preventDefault();
-  const email = $('emailInput').value.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setLoginMessage('invalidEmail'); return; }
+async function sendCode() {
+  const phone = internationalNumber($('countrySelect').value, $('phoneInput').value);
+  setRegisterMessage(null);
+  $('sendCodeBtn').disabled = $('resendBtn').disabled = true;
   try {
-    await sendEmailLink(email);
-    setLoginMessage('linkSent', { email });
-  } catch (e) {
-    setLoginMessage('signInError');
+    const sent = await requestCode({ fullName: $('fullNameInput').value, phone, lang: currentLanguage() });
+    // Solo en el emulador: el código se expone para las pruebas automáticas
+    if (USE_EMULATOR) window.traduyaDebugCode = sent.debugCode;
+    view.codeSent = message('codeSent', { email: sent.email });
+    $('profileForm').classList.add('hidden');
+    $('codeForm').classList.remove('hidden');
+    $('codeInput').value = '';
+    $('codeInput').focus();
+    render();
+  } catch (error) {
+    setRegisterMessage(error instanceof RegistrationError ? error.messageKey : 'connectionError');
+  } finally {
+    $('sendCodeBtn').disabled = $('resendBtn').disabled = false;
+  }
+}
+
+$('profileForm').onsubmit = event => { event.preventDefault(); sendCode(); };
+$('resendBtn').onclick = sendCode;
+$('changeDataBtn').onclick = () => { setRegisterMessage(null); showProfileStep(); };
+
+$('codeForm').onsubmit = async event => {
+  event.preventDefault();
+  setRegisterMessage(null);
+  $('confirmBtn').disabled = true;
+  try {
+    await confirm($('codeInput').value);
+    await isRegistered(true); // pide un token nuevo con la marca de registrado
+    view.status = message('registered');
+    await enterCallScreen();
+  } catch (error) {
+    setRegisterMessage(error instanceof RegistrationError ? error.messageKey : 'connectionError');
+  } finally {
+    $('confirmBtn').disabled = false;
   }
 };
-
-$('signOutBtn').onclick = () => { if (!inCall) signOut(); };
-
-watchUser(user => {
-  view.user = user;
-  $('loginCard').classList.toggle('hidden', Boolean(user));
-  $('callCard').classList.toggle('hidden', !user);
-  render();
-  if (user && AUTO_CALL && !inCall) placeCall();
-});
-
-completeEmailLinkSignIn(() => window.prompt(t('askEmail'))).catch(() => setLoginMessage('signInError'));
 
 // endregion
 
 // region Llamada
 
 function setStatus(key, values = {}) {
-  view.status = { key, values };
+  view.status = message(key, values);
   render();
 }
 
