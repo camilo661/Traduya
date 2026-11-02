@@ -1,4 +1,4 @@
-// Busca en el directorio de Traduya a quién pertenece un número de teléfono.
+// Busca en el directorio de Traduya a quién pertenece un número, y lee la ficha de quien llama.
 import { FIRESTORE_DOCUMENTS_URL } from './config.js';
 
 /** Error con la clave del texto que se muestra a la persona (ver i18n.js). */
@@ -33,4 +33,13 @@ export async function resolvePeerId(target, idToken) {
   if (response.status === 404) throw new CallError('notRegistered');
   if (!response.ok) throw new CallError('connectionError');
   return (await response.json()).fields.peerId.stringValue;
+}
+
+/** Nombre completo con el que se registró quien llama (su ficha en "callers"). */
+export async function fetchFullName(uid, idToken) {
+  const response = await fetch(`${FIRESTORE_DOCUMENTS_URL}/callers/${uid}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!response.ok) return null;
+  return (await response.json()).fields?.fullName?.stringValue ?? null;
 }
