@@ -48,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.component.DialPad
+import com.traduya.core.designsystem.component.GlassCard
 import com.traduya.core.designsystem.component.TraduyaWordmark
 import com.traduya.core.designsystem.theme.CallGreen
 import com.traduya.core.model.CallLanguagePreference
@@ -302,9 +303,8 @@ private fun ReturnToCallBanner(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun InfoBanner(text: String, actionLabel: String, onAction: () -> Unit) {
-    Surface(
+    GlassCard(
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.secondaryContainer,
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 16.dp),
@@ -317,7 +317,7 @@ private fun InfoBanner(text: String, actionLabel: String, onAction: () -> Unit) 
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),

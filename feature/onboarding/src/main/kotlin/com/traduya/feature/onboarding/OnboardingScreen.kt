@@ -44,7 +44,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.traduya.core.designsystem.component.TraduyaLogo
+import com.traduya.core.designsystem.component.GlassCard
+import com.traduya.core.designsystem.component.TraduyaLockup
 import com.traduya.core.model.LanguagePackStatus
 import com.traduya.core.telecom.CallPermissions
 import com.traduya.core.telecom.DialerRole
@@ -98,18 +99,17 @@ internal fun OnboardingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(32.dp))
-        TraduyaLogo(size = 96.dp)
         Spacer(Modifier.height(24.dp))
+        TraduyaLockup(emblemSize = 132.dp)
+        Spacer(Modifier.height(20.dp))
         Text(
-            text = "Bienvenido a Traduya",
+            text = "Bienvenido",
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
@@ -200,12 +200,7 @@ private fun SetupStep(
     loading: Boolean = false,
     progress: Float? = null,
 ) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,

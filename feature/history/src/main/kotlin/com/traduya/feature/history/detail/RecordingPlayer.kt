@@ -17,6 +17,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.traduya.core.designsystem.component.GlassCard
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,12 +62,7 @@ internal fun RecordingPlayer(path: String) {
         }
     }
 
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         if (player == null || !File(path).exists()) {
             Text(
                 text = "La grabación no está disponible",
@@ -74,7 +70,7 @@ internal fun RecordingPlayer(path: String) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
             )
-            return@Surface
+            return@GlassCard
         }
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             FilledIconButton(

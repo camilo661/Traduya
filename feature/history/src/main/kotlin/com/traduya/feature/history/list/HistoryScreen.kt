@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.component.ContactAvatar
+import com.traduya.core.designsystem.component.GlassCard
 import com.traduya.core.designsystem.component.EmptyState
 import com.traduya.core.designsystem.component.LanguageBadge
 import com.traduya.core.designsystem.util.formatCallDate
@@ -127,13 +128,7 @@ internal fun HistoryScreen(
 @Composable
 private fun CallRow(call: CallRecord, onClick: () -> Unit) {
     val isIncoming = call.direction == CallDirection.INCOMING
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    GlassCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             ContactAvatar(label = call.number)
             Column(

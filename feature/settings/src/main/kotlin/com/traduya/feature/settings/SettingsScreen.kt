@@ -42,7 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.traduya.core.designsystem.component.SectionCard
-import com.traduya.core.designsystem.component.TraduyaLogo
+import com.traduya.core.designsystem.component.TraduyaLockup
 import com.traduya.core.model.CallLanguagePreference
 import com.traduya.core.model.Language
 import com.traduya.core.model.LanguagePackStatus
@@ -198,9 +198,9 @@ internal fun SettingsScreen(
                 .padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            TraduyaLogo(size = 40.dp)
+            TraduyaLockup(emblemSize = 72.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Traduya 1.7.0", style = MaterialTheme.typography.labelLarge)
+            Text("Versión 1.7.0", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
