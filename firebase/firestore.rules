@@ -13,6 +13,17 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // Teléfono con la app Traduya y su número registrado (usuario anónimo de la app)
+    function isAppUser() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/appUsers/$(request.auth.uid));
+    }
+
+    // Puede buscar números quien está registrado en la web o tiene la app con su número
+    function canUseDirectory() {
+      return isRegisteredCaller() || isAppUser();
+    }
+
     // Nombre y apellido, y teléfono internacional (E.164)
     function isValidProfile(data) {
       return data.fullName is string
@@ -22,27 +33,46 @@ service cloud.firestore {
         && data.phone.matches('^[+][1-9][0-9]{7,14}$');
     }
 
-    // Directorio de números para llamadas por WiFi.
-    // Solo quien se registró en la página puede buscar un número, y nadie puede listarlos todos.
-    // Solo el teléfono que registró un número (su usuario anónimo) puede cambiarlo o borrarlo.
+    // Directorio de números para llamadas por WiFi (de la app y de la web).
+    // "lastSeen" se renueva mientras el número está listo para recibir: así se sabe si está activo.
+    // Solo quien usa Traduya puede buscar un número, y nadie puede listarlos todos.
+    // Solo quien registró un número puede cambiarlo o borrarlo.
     match /numbers/{number} {
       function isValidEntry() {
-        return request.resource.data.keys().hasOnly(['owner', 'peerId'])
+        return request.resource.data.keys().hasOnly(['owner', 'peerId', 'lastSeen'])
           && request.resource.data.owner == request.auth.uid
           && request.resource.data.peerId is string
-          && request.resource.data.peerId.matches('^traduya-[a-z0-9]{16}$');
+          && request.resource.data.peerId.matches('^traduya-[a-z0-9]{16}$')
+          && (!('lastSeen' in request.resource.data) || request.resource.data.lastSeen is timestamp);
       }
 
-      allow get: if isRegisteredCaller();
+      // Una cuenta registrada en la web solo puede ocupar su propio teléfono
+      function isOwnWebNumber() {
+        return !exists(/databases/$(database)/documents/callers/$(request.auth.uid))
+          || get(/databases/$(database)/documents/callers/$(request.auth.uid)).data.phone == number;
+      }
+
+      allow get: if canUseDirectory();
       allow list: if false;
       allow create: if request.auth != null
         && number.matches('^[+][1-9][0-9]{7,14}$')
-        && isValidEntry();
+        && isValidEntry()
+        && isOwnWebNumber();
       allow update: if request.auth != null
         && resource.data.owner == request.auth.uid
         && isValidEntry();
       allow delete: if request.auth != null
         && resource.data.owner == request.auth.uid;
+    }
+
+    // Teléfono con la app: su número, para que quien recibe sepa quién llama.
+    match /appUsers/{uid} {
+      allow get: if request.auth != null;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['phone'])
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^[+][1-9][0-9]{7,14}$');
+      allow delete: if isOwner(uid);
     }
 
     // Borrador del registro: lo escribe la propia cuenta de Google mientras espera el enlace del correo.
@@ -66,6 +96,15 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.registeredAt is timestamp;
       allow list, update, delete: if false;
+
+      // Historial privado de llamadas de la web: solo lo ve y lo escribe su dueño
+      match /calls/{callId} {
+        allow read, write: if isOwner(uid);
+
+        match /lines/{lineId} {
+          allow read, write: if isOwner(uid);
+        }
+      }
     }
 
     match /{document=**} {
