@@ -1,11 +1,14 @@
 // Une la pantalla con la cuenta, el registro, el directorio y la llamada.
 // Pantallas: bienvenida → cuenta de Google → registro (si falta) → teclado para llamar (solo por internet).
-import { AUTO_CALL, LINK_CODE, LINK_NUMBER, USE_EMULATOR } from './config.js';
+import { AUTO_CALL, LINK_CODE, LINK_NUMBER } from './config.js';
 import { applyTranslations, currentLanguage, setLanguage, t } from './i18n.js';
-import { idToken, isRegistered, setAuthLanguage, signInWithGoogle, signOut, watchUser } from './auth.js';
-import { RegistrationError, confirm, requestCode } from './registration.js';
+import {
+  cameFromEmailLink, completeConfirmationLink, currentUser, idToken, isConfirmationLink, sendConfirmationLink,
+  setAuthLanguage, signInWithGoogle, signOut, watchUser,
+} from './auth.js';
+import { RegistrationError, finishRegistration, fullNameOf, isRegistered, saveDraft, validateProfile } from './registration.js';
 import { countries, defaultCountry, dialCodeOf, internationalNumber, splitInternational } from './countries.js';
-import { CallError, fetchFullName, resolvePeerId } from './directory.js';
+import { CallError, resolvePeerId } from './directory.js';
 import { hangUp, setMuted, startCall } from './call.js';
 import { createDialpad } from './dialpad.js';
 
@@ -20,7 +23,7 @@ const view = {
   googleMessage: null,
   registerIntro: null,
   registerMessage: null,
-  codeSent: null,
+  linkSent: null,
   status: LINK_CODE ? message('callingTo', { target: LINK_CODE }) : message('ready'),
   user: null,
   fullName: null,
@@ -52,7 +55,7 @@ function render() {
   $('googleMessage').textContent = text(view.googleMessage);
   $('registerIntro').textContent = text(view.registerIntro);
   $('registerMessage').textContent = text(view.registerMessage);
-  $('codeSentText').textContent = text(view.codeSent);
+  $('linkSentText').textContent = text(view.linkSent);
   $('status').textContent = text(view.status);
   $('sessionName').textContent = view.user ? t('signedInAs', { name: view.fullName || view.user.email }) : '';
   renderCountries($('countrySelect'));
@@ -92,14 +95,25 @@ $('googleBtn').onclick = () => {
 $('otherAccountBtn').onclick = () => signOut();
 $('signOutBtn').onclick = () => { if (!inCall) signOut(); };
 
-watchUser(async user => {
+/** Decide la pantalla según la sesión. Se ejecuta en orden, una vez por cada cambio. */
+let handling = Promise.resolve();
+const onUser = user => { handling = handling.then(() => handleUser(user)).catch(() => {}); };
+
+async function handleUser(user) {
   view.user = user;
   if (!user) {
     view.fullName = null;
     show(view.screen === 'googleCard' ? 'googleCard' : 'welcomeCard');
     return;
   }
-  if (await isRegistered()) {
+  const token = await idToken();
+  if (await isRegistered(user.uid, token).catch(() => false)) {
+    await enterCallScreen();
+    return;
+  }
+  // Volvió con el enlace del correo: el borrador pasa a ser su ficha
+  if (await cameFromEmailLink() && await finishRegistration(user, token).catch(() => false)) {
+    view.status = message('registered');
     await enterCallScreen();
     return;
   }
@@ -108,21 +122,35 @@ watchUser(async user => {
   $('fullNameInput').value ||= user.displayName ?? '';
   showProfileStep();
   show('registerCard');
-});
+}
+
+watchUser(onUser);
 
 async function enterCallScreen() {
-  view.fullName = await fetchFullName(view.user.uid, await idToken()).catch(() => null);
+  view.fullName = await fullNameOf(view.user.uid, await idToken()).catch(() => null);
   show('callCard');
   if (AUTO_CALL && !inCall) placeCall();
 }
 
+// Si la página se abrió desde el enlace «Confirmar registro» del correo, se termina de entrar
+if (isConfirmationLink()) {
+  view.registerIntro = message('confirming');
+  completeConfirmationLink(() => window.prompt(t('askEmail')))
+    // Si ya había sesión de Google con el mismo correo, Firebase no avisa del cambio: se revisa aquí
+    .then(done => { if (done) onUser(currentUser()); })
+    .catch(error => {
+      view.registerMessage = message(error.code === 'auth/too-many-requests' ? 'tooManyRequests' : 'linkInvalid');
+      render();
+    });
+}
+
 // endregion
 
-// region Registro con código
+// region Registro con enlace de confirmación
 
 function showProfileStep() {
   $('profileForm').classList.remove('hidden');
-  $('codeForm').classList.add('hidden');
+  $('linkSentBox').classList.add('hidden');
 }
 
 function setRegisterMessage(key, values) {
@@ -130,46 +158,42 @@ function setRegisterMessage(key, values) {
   render();
 }
 
-async function sendCode() {
-  const phone = internationalNumber($('countrySelect').value, $('phoneInput').value);
+/**
+ * Con la sesión de Google: guarda el borrador y envía el enlace al Gmail.
+ * Con la sesión del enlace (si se abrió en otro navegador sin borrador): crea la ficha directamente.
+ */
+async function submitProfile() {
   setRegisterMessage(null);
-  $('sendCodeBtn').disabled = $('resendBtn').disabled = true;
+  $('sendLinkBtn').disabled = $('resendBtn').disabled = true;
   try {
-    const sent = await requestCode({ fullName: $('fullNameInput').value, phone, lang: currentLanguage() });
-    // Solo en el emulador: el código se expone para las pruebas automáticas
-    if (USE_EMULATOR) window.traduyaDebugCode = sent.debugCode;
-    view.codeSent = message('codeSent', { email: sent.email });
+    const profile = validateProfile({
+      fullName: $('fullNameInput').value,
+      phone: internationalNumber($('countrySelect').value, $('phoneInput').value),
+    });
+    const token = await idToken();
+    if (await cameFromEmailLink()) {
+      await finishRegistration(view.user, token, profile);
+      view.status = message('registered');
+      await enterCallScreen();
+      return;
+    }
+    await saveDraft(view.user.uid, profile, token);
+    await sendConfirmationLink(view.user.email);
+    view.linkSent = message('linkSent', { email: view.user.email });
     $('profileForm').classList.add('hidden');
-    $('codeForm').classList.remove('hidden');
-    $('codeInput').value = '';
-    $('codeInput').focus();
+    $('linkSentBox').classList.remove('hidden');
     render();
   } catch (error) {
-    setRegisterMessage(error instanceof RegistrationError ? error.messageKey : 'connectionError');
+    if (error instanceof RegistrationError) setRegisterMessage(error.messageKey);
+    else setRegisterMessage(error.code === 'auth/too-many-requests' ? 'tooManyRequests' : 'connectionError');
   } finally {
-    $('sendCodeBtn').disabled = $('resendBtn').disabled = false;
+    $('sendLinkBtn').disabled = $('resendBtn').disabled = false;
   }
 }
 
-$('profileForm').onsubmit = event => { event.preventDefault(); sendCode(); };
-$('resendBtn').onclick = sendCode;
+$('profileForm').onsubmit = event => { event.preventDefault(); submitProfile(); };
+$('resendBtn').onclick = submitProfile;
 $('changeDataBtn').onclick = () => { setRegisterMessage(null); showProfileStep(); };
-
-$('codeForm').onsubmit = async event => {
-  event.preventDefault();
-  setRegisterMessage(null);
-  $('confirmBtn').disabled = true;
-  try {
-    await confirm($('codeInput').value);
-    await isRegistered(true); // pide un token nuevo con la marca de registrado
-    view.status = message('registered');
-    await enterCallScreen();
-  } catch (error) {
-    setRegisterMessage(error instanceof RegistrationError ? error.messageKey : 'connectionError');
-  } finally {
-    $('confirmBtn').disabled = false;
-  }
-};
 
 // endregion
 

@@ -127,7 +127,11 @@ input, select {
 }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(31, 111, 209, .15); }
 select { -webkit-appearance: none; appearance: none; }
-input.code { text-align: center; font-size: 26px; letter-spacing: 8px; font-variant-numeric: tabular-nums; }
+.mail-icon {
+  width: 64px; height: 64px; margin: 6px auto 12px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; background: linear-gradient(135deg, var(--sky), var(--blue)); box-shadow: 0 8px 20px rgba(31, 111, 209, .28);
+}
+#linkSentText { text-align: center; }
 .links { display: flex; justify-content: space-between; margin-top: 10px; }
 
 /* Pantalla de llamar */

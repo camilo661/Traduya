@@ -50,7 +50,7 @@
     <p class="message" id="googleMessage"></p>
   </section>
 
-  <!-- 3. Registro: nombre completo, teléfono y código enviado al Gmail -->
+  <!-- 3. Registro: nombre completo, teléfono y enlace de confirmación enviado al Gmail -->
   <section class="card form hidden" id="registerCard">
     <h2 data-i18n="registerTitle"></h2>
     <p class="muted" id="registerIntro"></p>
@@ -62,19 +62,19 @@
       <select id="countrySelect"></select>
       <label for="phoneInput" data-i18n="phoneLabel"></label>
       <input id="phoneInput" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="300 123 4567" required>
-      <button class="wide primary" type="submit" id="sendCodeBtn" data-i18n="sendCode"></button>
+      <button class="wide primary" type="submit" id="sendLinkBtn" data-i18n="sendLink"></button>
     </form>
 
-    <form id="codeForm" class="hidden">
-      <p class="muted" id="codeSentText"></p>
-      <label for="codeInput" data-i18n="codeLabel"></label>
-      <input id="codeInput" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
-      <button class="wide primary" type="submit" id="confirmBtn" data-i18n="confirm"></button>
+    <div id="linkSentBox" class="hidden">
+      <div class="mail-icon" aria-hidden="true">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      </div>
+      <p class="muted" id="linkSentText"></p>
       <div class="links">
         <button class="link" type="button" id="resendBtn" data-i18n="resend"></button>
         <button class="link" type="button" id="changeDataBtn" data-i18n="changeData"></button>
       </div>
-    </form>
+    </div>
 
     <p class="message" id="registerMessage"></p>
     <button class="link" id="otherAccountBtn" data-i18n="useOtherAccount"></button>
