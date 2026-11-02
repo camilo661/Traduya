@@ -78,8 +78,8 @@ class InternetCallViewModel @Inject constructor(
         caller,
     ) { (peer, isMuted, isSpeaker), translation, lines, now, verifiedCaller ->
         CallUiState(
-            callerLabel = verifiedCaller?.label ?: "Comprobando quién llama…",
-            number = verifiedCaller?.takeIf { it.displayName != null }?.email.orEmpty(),
+            callerLabel = verifiedCaller?.fullName ?: "Comprobando quién llama…",
+            number = verifiedCaller?.phoneNumber.orEmpty(),
             status = when (peer) {
                 is PeerState.Incoming -> CallStatus.RINGING
                 PeerState.InCall -> CallStatus.ACTIVE
@@ -125,17 +125,18 @@ class InternetCallViewModel @Inject constructor(
         }
     }
 
-    /** Solo suena si quien llama inició sesión en la página web; si no, se rechaza. */
+    /** Solo suena si quien llama está registrado en la página web; si no, se rechaza. */
     private suspend fun onIncoming(state: PeerState.Incoming) {
         val verified = callerVerifier.verify(state.idToken)
         if (verified == null) {
-            Log.i(TAG, "Llamada rechazada: quien llama no tiene una sesión válida")
+            Log.i(TAG, "Llamada rechazada: quien llama no está registrado o su sesión no es válida")
             bridge.reject()
             return
         }
         caller.value = verified
         sessionOpen = true
-        session.begin(number = verified.label, direction = CallDirection.INCOMING)
+        // En el historial queda su teléfono, como en las llamadas normales
+        session.begin(number = verified.phoneNumber, direction = CallDirection.INCOMING)
     }
 
     private suspend fun closeSession() {
