@@ -200,7 +200,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLockup(emblemSize = 72.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Versión 1.8.0", style = MaterialTheme.typography.labelLarge)
+            Text("Versión 1.8.1", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
