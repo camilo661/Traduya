@@ -97,6 +97,17 @@ class LanguageArbiterTest {
     }
 
     @Test
+    fun `an english speaking user's own voice never becomes the leader`() {
+        val arbiter = LanguageArbiter(listOf(Language.SPANISH, Language.CHINESE))
+
+        val result = arbiter.decide(listOf(es(0.5f), en(0.95f)))
+
+        assertEquals(Language.ENGLISH, result?.language)
+        assertEquals(Language.SPANISH, arbiter.leader)
+        assertFalse(arbiter.isLocked)
+    }
+
+    @Test
     fun `a single confident word loses to a full sentence`() {
         val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
 

@@ -16,7 +16,7 @@ class TranslateUtteranceUseCaseTest {
 
     @Test
     fun `english is translated to spanish`() = runTest {
-        val result = TranslateUtteranceUseCase(fakeEngine)("Hello", Language.ENGLISH)
+        val result = TranslateUtteranceUseCase(fakeEngine)("Hello", Language.ENGLISH, Language.SPANISH)
 
         assertEquals(Speaker.THEM, result.speaker)
         assertEquals(Language.SPANISH, result.targetLanguage)
@@ -25,9 +25,24 @@ class TranslateUtteranceUseCaseTest {
 
     @Test
     fun `chinese is translated to spanish`() = runTest {
-        val result = TranslateUtteranceUseCase(fakeEngine)("你好", Language.CHINESE)
+        val result = TranslateUtteranceUseCase(fakeEngine)("你好", Language.CHINESE, Language.SPANISH)
 
         assertEquals(Language.CHINESE, result.sourceLanguage)
         assertEquals("[zh->es] 你好", result.translatedText)
+    }
+
+    @Test
+    fun `spanish is translated to the language the user chose`() = runTest {
+        val result = TranslateUtteranceUseCase(fakeEngine)("Hola", Language.SPANISH, Language.ENGLISH)
+
+        assertEquals(Language.ENGLISH, result.targetLanguage)
+        assertEquals("[es->en] Hola", result.translatedText)
+    }
+
+    @Test
+    fun `the same language is not translated`() = runTest {
+        val result = TranslateUtteranceUseCase(fakeEngine)("Hello", Language.ENGLISH, Language.ENGLISH)
+
+        assertEquals("Hello", result.translatedText)
     }
 }

@@ -65,6 +65,7 @@ fun SettingsRoute(onOpenWifiNumber: () -> Unit, viewModel: SettingsViewModel = h
     SettingsScreen(
         uiState = uiState,
         isDefaultDialer = isDefaultDialer,
+        onMyLanguage = viewModel::setMyLanguage,
         onLanguagePreference = viewModel::setLanguagePreference,
         onAutoTranslate = viewModel::setAutoTranslate,
         onAutoSpeaker = viewModel::setAutoSpeaker,
@@ -83,6 +84,7 @@ fun SettingsRoute(onOpenWifiNumber: () -> Unit, viewModel: SettingsViewModel = h
 internal fun SettingsScreen(
     uiState: SettingsUiState,
     isDefaultDialer: Boolean,
+    onMyLanguage: (Language) -> Unit,
     onLanguagePreference: (CallLanguagePreference) -> Unit,
     onAutoTranslate: (Boolean) -> Unit,
     onAutoSpeaker: (Boolean) -> Unit,
@@ -117,19 +119,42 @@ internal fun SettingsScreen(
 
         WifiNumberCard(phoneNumber = uiState.wifiNumber, onOpen = onOpenWifiNumber)
 
-        SectionCard(title = "Idioma de la otra persona") {
+        SectionCard(title = "Mi idioma (traducir a)") {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    CallLanguagePreference.entries.forEachIndexed { index, preference ->
+                    Language.entries.forEachIndexed { index, language ->
                         SegmentedButton(
-                            selected = settings.languagePreference == preference,
+                            selected = settings.myLanguage == language,
+                            onClick = { onMyLanguage(language) },
+                            shape = SegmentedButtonDefaults.itemShape(index, Language.entries.size),
+                        ) { Text(language.displayName) }
+                    }
+                }
+                Text(
+                    text = "Lo que dice la otra persona se transcribe y se muestra traducido " +
+                        "al ${settings.myLanguage.displayName.lowercase()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
+        }
+
+        SectionCard(title = "Idioma de la otra persona") {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                val choices = CallLanguagePreference.choicesFor(settings.myLanguage)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    choices.forEachIndexed { index, preference ->
+                        SegmentedButton(
+                            selected = settings.languagePreference == preference ||
+                                (preference == CallLanguagePreference.AUTOMATIC && settings.languagePreference !in choices),
                             onClick = { onLanguagePreference(preference) },
-                            shape = SegmentedButtonDefaults.itemShape(index, CallLanguagePreference.entries.size),
+                            shape = SegmentedButtonDefaults.itemShape(index, choices.size),
                         ) { Text(preference.label) }
                     }
                 }
                 Text(
-                    text = settings.languagePreference.description,
+                    text = settings.languagePreference.description(settings.myLanguage),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 10.dp),
@@ -165,6 +190,7 @@ internal fun SettingsScreen(
                 if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 PackRow(
                     language = language,
+                    myLanguage = settings.myLanguage,
                     status = uiState.packs[language] ?: LanguagePackStatus.Missing,
                     onDownload = { onDownloadPack(language) },
                 )
@@ -200,7 +226,7 @@ internal fun SettingsScreen(
         ) {
             TraduyaLockup(emblemSize = 72.dp)
             Spacer(Modifier.height(8.dp))
-            Text("Versión 1.8.1", style = MaterialTheme.typography.labelLarge)
+            Text("Versión 1.9.0", style = MaterialTheme.typography.labelLarge)
             Text(
                 text = "Traductor de llamadas en tiempo real con IA",
                 style = MaterialTheme.typography.bodySmall,
@@ -234,7 +260,7 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun PackRow(language: Language, status: LanguagePackStatus, onDownload: () -> Unit) {
+private fun PackRow(language: Language, myLanguage: Language, status: LanguagePackStatus, onDownload: () -> Unit) {
     Row(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -248,7 +274,7 @@ private fun PackRow(language: Language, status: LanguagePackStatus, onDownload: 
             Text(language.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
                 text = when (status) {
-                    LanguagePackStatus.Ready -> if (language == Language.SPANISH) {
+                    LanguagePackStatus.Ready -> if (language == myLanguage) {
                         "Listo · reconoce tu voz para no mostrarla"
                     } else {
                         "Listo · funciona sin internet"

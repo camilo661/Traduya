@@ -37,13 +37,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.traduya.core.designsystem.theme.SkyBlue
+import com.traduya.core.model.Language
 import com.traduya.core.model.TranscriptLine
 
 private const val LIVE_KEY = "live"
 private const val HIGHLIGHTED_WORDS = 2
 
 /**
- * Traducción en vivo estilo karaoke, solo en español:
+ * Traducción en vivo estilo karaoke, solo en el idioma del usuario ([targetLanguage]):
  * la frase que se está diciendo va abajo en letra grande y sus palabras más nuevas
  * se iluminan en azul; las frases anteriores suben y se atenúan.
  */
@@ -52,6 +53,7 @@ fun KaraokeTranscript(
     lines: List<TranscriptLine>,
     liveText: String,
     translationEnabled: Boolean,
+    targetLanguage: Language,
 ) {
     val listState = rememberLazyListState()
 
@@ -61,7 +63,7 @@ fun KaraokeTranscript(
     }
 
     if (lines.isEmpty() && liveText.isBlank()) {
-        KaraokePlaceholder(translationEnabled)
+        KaraokePlaceholder(translationEnabled, targetLanguage)
         return
     }
 
@@ -119,7 +121,7 @@ private fun LiveLine(text: String) {
 }
 
 @Composable
-private fun KaraokePlaceholder(translationEnabled: Boolean) {
+private fun KaraokePlaceholder(translationEnabled: Boolean, targetLanguage: Language) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
@@ -130,7 +132,7 @@ private fun KaraokePlaceholder(translationEnabled: Boolean) {
             )
             Text(
                 text = if (translationEnabled) {
-                    "Cuando la otra persona hable,\naquí verás la traducción en español."
+                    "Cuando la otra persona hable,\naquí verás la traducción en ${targetLanguage.displayName.lowercase()}."
                 } else {
                     "La traducción está en pausa.\nActívala con el botón Traducir."
                 },

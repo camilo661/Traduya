@@ -50,11 +50,11 @@ class TranslationLatencyTest {
     private val translator = MlKitTranslationEngine()
 
     @Test
-    fun automaticWithUserSpeechFilter() = measure("automático + filtro de español", TranscriptionConfig(Language.foreignLanguages))
+    fun automaticWithUserSpeechFilter() = measure("automático + filtro de español", TranscriptionConfig(Language.othersThan(Language.SPANISH)))
 
     @Test
     fun automaticWithoutUserSpeechFilter() =
-        measure("automático sin filtro de español", TranscriptionConfig(Language.foreignLanguages, ignoreUserSpeech = false))
+        measure("automático sin filtro de español", TranscriptionConfig(Language.othersThan(Language.SPANISH), ignoreUserSpeech = false))
 
     @Test
     fun englishOnly() = measure("solo inglés", TranscriptionConfig(listOf(Language.ENGLISH), ignoreUserSpeech = false))
@@ -66,8 +66,8 @@ class TranslationLatencyTest {
         val chunks = samples.toList().chunked(1_600).map { AudioChunk(it.toShortArray(), level = 0.5f, blocked = false) }
         val audioMillis = samples.size / 16
         listOf(
-            "automático + filtro de español" to TranscriptionConfig(Language.foreignLanguages),
-            "automático sin filtro de español" to TranscriptionConfig(Language.foreignLanguages, ignoreUserSpeech = false),
+            "automático + filtro de español" to TranscriptionConfig(Language.othersThan(Language.SPANISH)),
+            "automático sin filtro de español" to TranscriptionConfig(Language.othersThan(Language.SPANISH), ignoreUserSpeech = false),
             "solo inglés" to TranscriptionConfig(listOf(Language.ENGLISH), ignoreUserSpeech = false),
         ).forEach { (name, config) ->
             val millis = measureTimeMillis { transcriber.transcribe(flow { chunks.forEach { emit(it) } }, config).toList() }

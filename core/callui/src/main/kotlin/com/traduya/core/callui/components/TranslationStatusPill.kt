@@ -43,7 +43,8 @@ fun TranslationStatusPill(uiState: CallUiState) {
         uiState.translationStatus == TranslationStatus.ERROR -> uiState.translationError ?: "Error de traducción"
         uiState.translationStatus == TranslationStatus.PREPARING -> "Preparando IA…"
         uiState.detectedLanguage != null ->
-            "${uiState.detectedLanguage.flag} ${uiState.detectedLanguage.displayName} → 🇪🇸 Español"
+            "${uiState.detectedLanguage.flag} ${uiState.detectedLanguage.displayName} → " +
+                "${uiState.targetLanguage.flag} ${uiState.targetLanguage.displayName}"
 
         else -> "Detectando idioma…"
     }

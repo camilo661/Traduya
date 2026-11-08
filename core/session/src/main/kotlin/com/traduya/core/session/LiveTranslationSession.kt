@@ -45,7 +45,7 @@ import javax.inject.Singleton
 /**
  * Motor de traducción en vivo de una llamada:
  * se graba la llamada completa y, a la vez, la voz de la otra persona se transcribe y traduce
- * palabra a palabra. En el historial solo se guardan las frases traducidas de la otra persona.
+ * palabra a palabra al idioma que el usuario eligió en Ajustes. En el historial solo se guardan las frases traducidas de la otra persona.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -90,13 +90,18 @@ internal class LiveTranslationSession @Inject constructor(
     override suspend fun begin(number: String, direction: CallDirection) {
         settings = settingsRepository.settings.first()
         val historyId = historyRepository.startCall(number, direction, System.currentTimeMillis())
-        _state.value = TranslationSessionState(historyId = historyId, enabled = settings.autoTranslate)
+        _state.value = TranslationSessionState(
+            historyId = historyId,
+            enabled = settings.autoTranslate,
+            targetLanguage = settings.myLanguage,
+        )
 
         // Mientras suena, dejamos la IA lista para que la primera frase salga al instante
         scope.launch {
-            val foreign = settings.languagePreference.foreignCandidates
-            transcriber.prepare(foreign + Language.SPANISH)
-            foreign.forEach { runCatching { translationEngine.translate("hello", it, Language.SPANISH) } }
+            val mine = settings.myLanguage
+            val foreign = settings.languagePreference.foreignCandidates(mine)
+            transcriber.prepare(foreign + mine)
+            foreign.forEach { runCatching { translationEngine.translate(WARM_UP[it].orEmpty(), it, mine) } }
         }
     }
 
@@ -158,7 +163,8 @@ internal class LiveTranslationSession @Inject constructor(
     private fun startTranslation() {
         if (translationJob?.isActive == true) return
         val config = TranscriptionConfig(
-            foreignLanguages = settings.languagePreference.foreignCandidates,
+            foreignLanguages = settings.languagePreference.foreignCandidates(settings.myLanguage),
+            userLanguage = settings.myLanguage,
             ignoreUserSpeech = userVoiceInAudio,
         )
         _state.update { it.copy(status = TranslationStatus.PREPARING, errorMessage = null) }
@@ -211,7 +217,7 @@ internal class LiveTranslationSession @Inject constructor(
             .filterNotNull()
             .map { phrase ->
                 phrase to runCatching {
-                    translationEngine.translate(phrase.text, phrase.language, Language.SPANISH)
+                    translationEngine.translate(phrase.text, phrase.language, settings.myLanguage)
                 }.getOrNull()
             }
             .collect { (phrase, translated) ->
@@ -223,7 +229,7 @@ internal class LiveTranslationSession @Inject constructor(
 
     private suspend fun translateAndSave(event: SpeechEvent.Final) {
         val historyId = _state.value.historyId ?: return
-        runCatching { translateUtterance(event.text, event.language) }
+        runCatching { translateUtterance(event.text, event.language, settings.myLanguage) }
             .onSuccess { result ->
                 languages.record(result.sourceLanguage)
                 withContext(NonCancellable) {
@@ -260,5 +266,8 @@ internal class LiveTranslationSession @Inject constructor(
 
     private companion object {
         const val AUDIO_BUFFER_CHUNKS = 50 // 5 segundos de audio
+
+        /** Una palabra por idioma para dejar listo el traductor antes de que contesten. */
+        val WARM_UP = mapOf(Language.SPANISH to "hola", Language.ENGLISH to "hello", Language.CHINESE to "你好")
     }
 }

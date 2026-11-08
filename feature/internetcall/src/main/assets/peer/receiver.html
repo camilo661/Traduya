@@ -21,6 +21,8 @@ const ICE_SERVERS = [
 const myId = new URLSearchParams(location.search).get('id');
 let peer = null, incoming = null, current = null, localStream = null;
 let audioContext = null, processor = null, remoteAudio = null, ending = false, data = null;
+// Idioma del usuario de la app: el otro lado traduce nuestros subtítulos desde este idioma
+let myLang = 'es';
 
 function connect() {
   peer = new Peer(myId, { config: { iceServers: ICE_SERVERS }, debug: 1 });
@@ -44,8 +46,9 @@ function connect() {
 }
 
 /** Llama a otro número de Traduya; [idToken] identifica a este teléfono ante quien recibe. */
-async function callPeer(peerId, idToken) {
+async function callPeer(peerId, idToken, lang) {
   if (current || incoming) return;
+  myLang = lang || 'es';
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -55,7 +58,7 @@ async function callPeer(peerId, idToken) {
     Traduya.onEnded();
     return;
   }
-  current = peer.call(peerId, localStream, { metadata: { idToken, kind: 'app', lang: 'es' } });
+  current = peer.call(peerId, localStream, { metadata: { idToken, kind: 'app', lang: myLang } });
   current.on('stream', stream => {
     onRemoteStream(stream);
     if (!data) attachData(peer.connect(peerId, { reliable: true }));
@@ -63,11 +66,11 @@ async function callPeer(peerId, idToken) {
   watch(current);
 }
 
-/** Canal de subtítulos: se presenta como app en español y avisa a Kotlin de quién está al otro lado. */
+/** Canal de subtítulos: se presenta como app en el idioma del usuario y avisa a Kotlin de quién está al otro lado. */
 function attachData(connection) {
   if (data) { connection.close(); return; }
   data = connection;
-  connection.on('open', () => connection.send({ type: 'hello', kind: 'app', lang: 'es' }));
+  connection.on('open', () => connection.send({ type: 'hello', kind: 'app', lang: myLang }));
   connection.on('data', message => {
     if (message && message.type === 'hello') Traduya.onRemoteHello(message.kind || '', message.lang || '');
   });
@@ -80,7 +83,7 @@ function attachData(connection) {
 }
 
 function sendCaption(text, final) {
-  if (data && data.open) data.send({ type: 'caption', text, final, lang: 'es' });
+  if (data && data.open) data.send({ type: 'caption', text, final, lang: myLang });
 }
 
 function watch(call) {
@@ -92,8 +95,9 @@ function watch(call) {
   });
 }
 
-async function answer() {
+async function answer(lang) {
   if (!incoming) return;
+  myLang = lang || 'es';
   current = incoming;
   incoming = null;
   try {

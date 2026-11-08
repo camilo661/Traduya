@@ -12,16 +12,25 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Subtítulos de la voz del usuario (en español) para quien está al otro lado en la página web:
+ * Subtítulos de la voz del usuario (en su idioma, [language]) para quien está al otro lado en la página web:
  * su navegador no puede transcribir el audio que le llega, así que se lo enviamos ya en texto
  * y allí se traduce a su idioma.
  */
 class OwnCaptions @Inject constructor(
     private val transcriber: SpeechTranscriber,
 ) {
-    fun start(scope: CoroutineScope, ownAudio: Flow<AudioChunk>, send: (text: String, final: Boolean) -> Unit): Job =
+    fun start(
+        scope: CoroutineScope,
+        language: Language,
+        ownAudio: Flow<AudioChunk>,
+        send: (text: String, final: Boolean) -> Unit,
+    ): Job =
         scope.launch {
-            val config = TranscriptionConfig(foreignLanguages = listOf(Language.SPANISH), ignoreUserSpeech = false)
+            val config = TranscriptionConfig(
+                foreignLanguages = listOf(language),
+                userLanguage = language,
+                ignoreUserSpeech = false,
+            )
             transcriber.transcribe(ownAudio, config).collect { event ->
                 when (event) {
                     is SpeechEvent.Partial -> send(event.text, false)

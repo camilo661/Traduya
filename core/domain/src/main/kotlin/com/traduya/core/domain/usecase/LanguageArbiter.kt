@@ -17,10 +17,10 @@ data class Hypothesis(
  * Tras [winsToLock] victorias seguidas del mismo idioma extranjero, o una sola muy clara
  * (confianza de [instantLockConfidence] o más), se fija ese idioma: el teléfono deja de procesar
  * los demás y la traducción va mucho más rápida.
- * El español se trata aparte: significa que habló el usuario y nunca se fija.
+ * Un idioma que no está en la lista (el del usuario) se trata aparte: significa que habló el usuario y nunca se fija.
  */
 class LanguageArbiter(
-    foreignLanguages: List<Language>,
+    private val foreignLanguages: List<Language>,
     private val minConfidence: Float = 0.5f,
     private val winsToLock: Int = 2,
     private val instantLockConfidence: Float = 0.9f,
@@ -37,6 +37,8 @@ class LanguageArbiter(
 
     private var streak = 0
 
+    fun isForeign(language: Language): Boolean = language in foreignLanguages
+
     /** Devuelve la hipótesis ganadora, o null si ninguna es fiable. */
     fun decide(hypotheses: List<Hypothesis>): Hypothesis? {
         val best = hypotheses
@@ -44,7 +46,7 @@ class LanguageArbiter(
             .maxByOrNull { score(it) }
             ?: return null
         if (best.confidence < minConfidence) return null
-        if (best.language == Language.SPANISH) return best
+        if (best.language !in foreignLanguages) return best
 
         if (best.language == leader) streak++ else {
             leader = best.language

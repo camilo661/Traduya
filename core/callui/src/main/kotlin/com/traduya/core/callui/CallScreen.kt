@@ -83,6 +83,7 @@ fun CallScreen(
                         lines = uiState.lines,
                         liveText = uiState.liveText,
                         translationEnabled = uiState.translationEnabled,
+                        targetLanguage = uiState.targetLanguage,
                     )
                 }
             }

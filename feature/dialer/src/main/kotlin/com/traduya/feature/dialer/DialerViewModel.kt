@@ -23,6 +23,7 @@ import javax.inject.Inject
 data class DialerUiState(
     val number: String = "",
     val languagePreference: CallLanguagePreference = CallLanguagePreference.AUTOMATIC,
+    val myLanguage: Language = Language.SPANISH,
     val errorMessage: String? = null,
     val languagePacksMissing: Boolean = false,
     val ongoingCallLabel: String? = null,
@@ -51,6 +52,7 @@ class DialerViewModel @Inject constructor(
         DialerUiState(
             number = number,
             languagePreference = settings.languagePreference,
+            myLanguage = settings.myLanguage,
             errorMessage = error,
             languagePacksMissing = packsMissing,
             ongoingCallLabel = call?.takeIf { it.status != CallStatus.DISCONNECTED }?.label,

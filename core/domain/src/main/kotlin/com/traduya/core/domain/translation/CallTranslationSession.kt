@@ -21,7 +21,7 @@ interface CallTranslationSession {
     /**
      * La llamada se conectó: se graba y se traduce el audio de la otra persona.
      * [includesUserVoice] indica si en ese audio también se oye al usuario
-     * (micrófono con altavoz): entonces se escucha el español para descartar su voz. Si solo llega la voz de
+     * (micrófono con altavoz): entonces se escucha su idioma para descartar su voz. Si solo llega la voz de
      * la otra persona (internet, línea con Shizuku), no hace falta y la traducción va más rápida.
      */
     fun connect(audio: Flow<AudioChunk>, includesUserVoice: Boolean = true)

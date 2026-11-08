@@ -7,9 +7,11 @@ data class TranslationSessionState(
     val historyId: Long? = null,
     val enabled: Boolean = true,
     val status: TranslationStatus = TranslationStatus.IDLE,
-    /** Traducción al español de la frase que se está diciendo ahora mismo. */
+    /** Traducción (al idioma del usuario) de la frase que se está diciendo ahora mismo. */
     val liveText: String = "",
     val detectedLanguage: Language? = null,
+    /** Idioma del usuario, al que se traduce. */
+    val targetLanguage: Language = Language.SPANISH,
     val errorMessage: String? = null,
     val audioLevel: Float = 0f,
     val micBlocked: Boolean = false,

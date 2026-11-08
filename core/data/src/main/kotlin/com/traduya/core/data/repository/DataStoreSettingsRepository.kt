@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.traduya.core.domain.repository.SettingsRepository
 import com.traduya.core.model.AppSettings
 import com.traduya.core.model.CallLanguagePreference
+import com.traduya.core.model.Language
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -19,6 +20,7 @@ internal class DataStoreSettingsRepository @Inject constructor(
     override val settings: Flow<AppSettings> = dataStore.data.map { prefs ->
         val defaults = AppSettings()
         AppSettings(
+            myLanguage = Language.fromCode(prefs[Keys.MY_LANGUAGE]) ?: defaults.myLanguage,
             languagePreference = prefs[Keys.LANGUAGE]
                 ?.let { name -> CallLanguagePreference.entries.firstOrNull { it.name == name } }
                 ?: defaults.languagePreference,
@@ -27,6 +29,10 @@ internal class DataStoreSettingsRepository @Inject constructor(
             recordCalls = prefs[Keys.RECORD_CALLS] ?: defaults.recordCalls,
             onboardingCompleted = prefs[Keys.ONBOARDING_DONE] ?: defaults.onboardingCompleted,
         )
+    }
+
+    override suspend fun setMyLanguage(language: Language) {
+        dataStore.edit { it[Keys.MY_LANGUAGE] = language.code }
     }
 
     override suspend fun setLanguagePreference(preference: CallLanguagePreference) {
@@ -50,6 +56,7 @@ internal class DataStoreSettingsRepository @Inject constructor(
     }
 
     private object Keys {
+        val MY_LANGUAGE = stringPreferencesKey("my_language")
         val LANGUAGE = stringPreferencesKey("language_preference")
         val AUTO_TRANSLATE = booleanPreferencesKey("auto_translate")
         val AUTO_SPEAKER = booleanPreferencesKey("auto_speaker")

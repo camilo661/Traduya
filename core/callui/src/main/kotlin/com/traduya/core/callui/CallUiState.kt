@@ -20,6 +20,7 @@ data class CallUiState(
     val micBlocked: Boolean = false,
     val isRecording: Boolean = false,
     val detectedLanguage: Language? = null,
+    val targetLanguage: Language = Language.SPANISH,
     val lines: List<TranscriptLine> = emptyList(),
     val hasEnded: Boolean = false,
 ) {

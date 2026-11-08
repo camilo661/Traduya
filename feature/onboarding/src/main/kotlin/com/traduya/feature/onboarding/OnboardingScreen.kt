@@ -115,7 +115,7 @@ internal fun OnboardingScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Recibe llamadas y lee en español, en tiempo real, lo que te dicen en inglés o chino.",
+            text = "Recibe llamadas y lee en tu idioma (español, inglés o chino), en tiempo real, lo que te dicen.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

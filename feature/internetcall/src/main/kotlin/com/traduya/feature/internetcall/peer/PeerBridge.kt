@@ -7,6 +7,7 @@ import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.traduya.core.model.AudioChunk
+import com.traduya.core.model.Language
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -74,13 +75,14 @@ class PeerBridge {
         webView = view
     }
 
-    fun answer() = run("answer()")
+    /** Contesta; [language] es el idioma del usuario, el de los subtítulos que enviamos. */
+    fun answer(language: Language) = run("answer(${JSONObject.quote(language.code)})")
 
     /** Llama a [peerId] (el número [target]); [idToken] identifica a este teléfono. */
-    fun call(peerId: String, idToken: String, target: String) {
+    fun call(peerId: String, idToken: String, target: String, language: Language) {
         _notice.value = null
         _state.value = PeerState.Dialing(target)
-        run("callPeer(${JSONObject.quote(peerId)}, ${JSONObject.quote(idToken)})")
+        run("callPeer(${JSONObject.quote(peerId)}, ${JSONObject.quote(idToken)}, ${JSONObject.quote(language.code)})")
     }
 
     fun sendCaption(text: String, final: Boolean) = run("sendCaption(${JSONObject.quote(text)}, $final)")

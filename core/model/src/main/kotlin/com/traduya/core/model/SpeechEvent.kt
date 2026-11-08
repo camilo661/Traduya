@@ -10,7 +10,7 @@ sealed interface SpeechEvent {
     /** Frase terminada, con el idioma elegido y la confianza del reconocedor (0 a 1). */
     data class Final(val text: String, val language: Language, val confidence: Float) : SpeechEvent
 
-    /** La frase era del propio usuario (en español) o ruido: se descarta. */
+    /** La frase era del propio usuario (en su idioma) o ruido: se descarta. */
     data object Discarded : SpeechEvent
 
     data class Error(val message: String, val fatal: Boolean) : SpeechEvent
@@ -18,10 +18,12 @@ sealed interface SpeechEvent {
 
 /**
  * @param foreignLanguages idiomas posibles de quien habla.
- * @param ignoreUserSpeech escucha también el español para descartar lo que dice el usuario.
- *   Con false se transcribe lo que llega en [foreignLanguages], aunque sea español (la propia voz).
+ * @param userLanguage idioma del usuario.
+ * @param ignoreUserSpeech escucha también [userLanguage] para descartar lo que dice el usuario.
+ *   Con false se transcribe lo que llega en [foreignLanguages], aunque sea la propia voz.
  */
 data class TranscriptionConfig(
     val foreignLanguages: List<Language>,
+    val userLanguage: Language = Language.SPANISH,
     val ignoreUserSpeech: Boolean = true,
 )

@@ -43,7 +43,7 @@ class LiveTranslationPipelineTest {
 
     private val transcriber = VoskSpeechTranscriber(store)
     private val translator = MlKitTranslationEngine()
-    private val auto = TranscriptionConfig(Language.foreignLanguages)
+    private val auto = TranscriptionConfig(Language.othersThan(Language.SPANISH))
 
     @Test
     fun englishIsDetectedAndTranslated() = runBlocking {
@@ -76,8 +76,29 @@ class LiveTranslationPipelineTest {
         assertTrue(events.any { it is SpeechEvent.Discarded })
     }
 
-    private suspend fun transcribe(asset: String): List<SpeechEvent> =
-        transcriber.transcribe(chunksOf(asset), auto).toList()
+    /** Si el usuario eligió inglés como su idioma, el español es la otra persona y se traduce al inglés. */
+    private val englishUser = TranscriptionConfig(Language.othersThan(Language.ENGLISH), userLanguage = Language.ENGLISH)
+
+    @Test
+    fun spanishIsTranslatedForAnEnglishSpeakingUser() = runBlocking {
+        val events = transcribe("spanish.wav", englishUser)
+        val final = events.filterIsInstance<SpeechEvent.Final>().first()
+        val english = translator.translate(final.text, final.language, Language.ENGLISH)
+        Log.i("TraduyaTest", "ES->EN final='${final.text}' -> '$english'")
+
+        assertEquals(Language.SPANISH, final.language)
+    }
+
+    @Test
+    fun englishSpeakingUserVoiceIsDiscarded() = runBlocking {
+        val events = transcribe("english.wav", englishUser)
+        Log.i("TraduyaTest", "EN user events=${events.filter { it !is SpeechEvent.Partial }}")
+
+        assertTrue(events.none { it is SpeechEvent.Final })
+    }
+
+    private suspend fun transcribe(asset: String, config: TranscriptionConfig = auto): List<SpeechEvent> =
+        transcriber.transcribe(chunksOf(asset), config).toList()
 
     /** Lee el WAV y lo entrega en trozos de 100 ms, como el micrófono, con 1,5 s de silencio al final. */
     private fun chunksOf(asset: String): Flow<AudioChunk> {

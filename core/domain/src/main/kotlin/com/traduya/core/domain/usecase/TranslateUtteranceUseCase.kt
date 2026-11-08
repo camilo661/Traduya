@@ -6,16 +6,16 @@ import com.traduya.core.model.Speaker
 import com.traduya.core.model.UtteranceTranslation
 import javax.inject.Inject
 
-/** Traduce al español lo que dijo la otra persona. */
+/** Traduce al idioma del usuario ([target]) lo que dijo la otra persona. */
 class TranslateUtteranceUseCase @Inject constructor(
     private val engine: TranslationEngine,
 ) {
-    suspend operator fun invoke(text: String, source: Language): UtteranceTranslation =
+    suspend operator fun invoke(text: String, source: Language, target: Language): UtteranceTranslation =
         UtteranceTranslation(
             speaker = Speaker.THEM,
             sourceLanguage = source,
-            targetLanguage = Language.SPANISH,
+            targetLanguage = target,
             originalText = text,
-            translatedText = engine.translate(text, source, Language.SPANISH),
+            translatedText = if (source == target) text else engine.translate(text, source, target),
         )
 }

@@ -52,6 +52,7 @@ import com.traduya.core.designsystem.component.GlassCard
 import com.traduya.core.designsystem.component.TraduyaWordmark
 import com.traduya.core.designsystem.theme.CallGreen
 import com.traduya.core.model.CallLanguagePreference
+import com.traduya.core.model.Language
 import com.traduya.core.telecom.DialerRole
 
 @Composable
@@ -118,7 +119,7 @@ internal fun DialerScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TraduyaWordmark(modifier = Modifier.weight(1f))
-            TranslationChip(uiState.languagePreference)
+            TranslationChip(uiState.languagePreference, uiState.myLanguage)
         }
 
         InternetCallCard(onClick = onOpenInternetCall)
@@ -209,7 +210,7 @@ internal fun DialerScreen(
 }
 
 @Composable
-private fun TranslationChip(preference: CallLanguagePreference) {
+private fun TranslationChip(preference: CallLanguagePreference, myLanguage: Language) {
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -223,7 +224,8 @@ private fun TranslationChip(preference: CallLanguagePreference) {
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = preference.label,
+                text = "${preference.fixedLanguage?.takeIf { it != myLanguage }?.displayName ?: "Automático"} → " +
+                    myLanguage.displayName,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
@@ -265,7 +267,7 @@ private fun InternetCallCard(onClick: () -> Unit) {
                     color = androidx.compose.ui.graphics.Color.White,
                 )
                 Text(
-                    text = "Comparte tu enlace y lee en español lo que te dicen, en vivo",
+                    text = "Comparte tu enlace y lee en tu idioma lo que te dicen, en vivo",
                     style = MaterialTheme.typography.bodySmall,
                     color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
                 )

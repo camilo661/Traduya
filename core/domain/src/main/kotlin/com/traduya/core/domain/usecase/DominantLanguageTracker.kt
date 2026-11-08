@@ -10,7 +10,6 @@ class DominantLanguageTracker {
         private set
 
     fun record(language: Language) {
-        if (language == Language.SPANISH) return
         counts[language] = (counts[language] ?: 0) + 1
         lastForeign = language
     }

@@ -25,7 +25,7 @@ import javax.inject.Singleton
  *
  * Con Shizuku activo, el audio sale directamente de la línea telefónica: solo la voz de la otra
  * persona, con o sin altavoz. Sin él, se usa el micrófono (muchos teléfonos lo silencian) y
- * la voz del usuario se descarta porque se reconoce en español.
+ * la voz del usuario se descarta porque se reconoce en su idioma.
  */
 @Singleton
 class CallSessionCoordinator @Inject constructor(

@@ -74,6 +74,7 @@ class InCallViewModel @Inject constructor(
             micBlocked = translation.micBlocked,
             isRecording = translation.isRecording,
             detectedLanguage = translation.detectedLanguage,
+            targetLanguage = translation.targetLanguage,
             lines = lines,
             hasEnded = ended,
         )

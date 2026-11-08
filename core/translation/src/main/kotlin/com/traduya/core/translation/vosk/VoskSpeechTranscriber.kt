@@ -27,8 +27,8 @@ import javax.inject.Inject
  * frases completas y el [LanguageArbiter] decide qué idioma era. En cuanto el idioma se confirma, solo
  * sigue escuchando ese reconocedor.
  *
- * Con [TranscriptionConfig.ignoreUserSpeech] también escucha el español para descartar la voz del usuario;
- * ese reconocedor solo cierra la frase si de verdad oyó hablar español, para no cortar las frases de la
+ * Con [TranscriptionConfig.ignoreUserSpeech] también escucha el idioma del usuario para descartar su voz;
+ * ese reconocedor solo cierra la frase si de verdad oyó hablar ese idioma, para no cortar las frases de la
  * otra persona a la mitad.
  */
 internal class VoskSpeechTranscriber @Inject constructor(
@@ -40,7 +40,8 @@ internal class VoskSpeechTranscriber @Inject constructor(
     }
 
     override fun transcribe(audio: Flow<AudioChunk>, config: TranscriptionConfig): Flow<SpeechEvent> = flow {
-        val wanted = config.foreignLanguages + if (config.ignoreUserSpeech) listOf(Language.SPANISH) else emptyList()
+        val mine = config.userLanguage
+        val wanted = config.foreignLanguages + if (config.ignoreUserSpeech) listOf(mine) else emptyList()
         val recognizers = LinkedHashMap<Language, Recognizer>()
         for (language in wanted.distinct()) {
             val model = models.load(language) ?: continue
@@ -50,9 +51,9 @@ internal class VoskSpeechTranscriber @Inject constructor(
                 setEndpointerDelays(START_MAX_SECONDS, END_SILENCE_SECONDS, MAX_PHRASE_SECONDS)
             }
         }
-        // Con ignoreUserSpeech el español es la voz del usuario; sin él, también se transcribe (subtítulos propios)
-        val userFilter = config.ignoreUserSpeech && Language.SPANISH in recognizers
-        val foreign = recognizers.keys.filter { !userFilter || it != Language.SPANISH }
+        // Con ignoreUserSpeech su idioma es la voz del usuario; sin él, también se transcribe (subtítulos propios)
+        val userFilter = config.ignoreUserSpeech && mine in recognizers && mine !in config.foreignLanguages
+        val foreign = recognizers.keys.filter { !userFilter || it != mine }
         if (foreign.isEmpty()) {
             emit(SpeechEvent.Error("Descarga los idiomas en Ajustes para traducir", fatal = true))
             recognizers.values.forEach { it.close() }
@@ -69,12 +70,12 @@ internal class VoskSpeechTranscriber @Inject constructor(
             audio.collect { chunk ->
                 val endpointed = acceptInParallel(recognizers, chunk)
 
-                // El filtro del español cerró su frase solo: si no oyó español claro, se ignora y la frase sigue
-                if (userFilter && Language.SPANISH in endpointed && arbiter.leader !in endpointed) {
-                    val heard = VoskResults.final(recognizers.getValue(Language.SPANISH).result, Language.SPANISH)
+                // El filtro de la voz del usuario cerró su frase solo: si no oyó su idioma claro, la frase sigue
+                if (userFilter && mine in endpointed && arbiter.leader !in endpointed) {
+                    val heard = VoskResults.final(recognizers.getValue(mine).result, mine)
                     if (heard.confidence >= USER_SPEECH_CONFIDENCE && heard.wordCount > 0) {
                         // El usuario habló: se cierra la frase para descartarla
-                        finishPhrase(recognizers, endpointed - Language.SPANISH, heardSoFar, arbiter, config, heard)
+                        finishPhrase(recognizers, endpointed - mine, heardSoFar, arbiter, userFilter, heard)
                         lastPartial = ""
                         return@collect
                     }
@@ -82,7 +83,7 @@ internal class VoskSpeechTranscriber @Inject constructor(
 
                 if (arbiter.leader !in endpointed) {
                     // Otro idioma hizo una pausa: guarda lo que oyó y la frase sigue
-                    (endpointed - Language.SPANISH).forEach { language ->
+                    endpointed.filter { it in foreign }.forEach { language ->
                         heardSoFar.getOrPut(language) { mutableListOf() } +=
                             VoskResults.final(recognizers.getValue(language).result, language)
                     }
@@ -90,7 +91,7 @@ internal class VoskSpeechTranscriber @Inject constructor(
                     return@collect
                 }
 
-                finishPhrase(recognizers, endpointed, heardSoFar, arbiter, config)
+                finishPhrase(recognizers, endpointed, heardSoFar, arbiter, userFilter)
                 lastPartial = ""
             }
         } finally {
@@ -125,7 +126,7 @@ internal class VoskSpeechTranscriber @Inject constructor(
         endpointed: Set<Language>,
         heardSoFar: MutableMap<Language, MutableList<Hypothesis>>,
         arbiter: LanguageArbiter,
-        config: TranscriptionConfig,
+        userFilter: Boolean,
         userSpeech: Hypothesis? = null,
     ) {
         val hypotheses = recognizers.map { (language, recognizer) ->
@@ -135,14 +136,15 @@ internal class VoskSpeechTranscriber @Inject constructor(
         }
         heardSoFar.clear()
         val winner = arbiter.decide(hypotheses)
-        if (winner == null || (config.ignoreUserSpeech && winner.language == Language.SPANISH)) {
+        // Si ganó un idioma que no es de la otra persona, era la voz del usuario
+        if (winner == null || (userFilter && !arbiter.isForeign(winner.language))) {
             emit(SpeechEvent.Discarded)
         } else {
             emit(SpeechEvent.Final(winner.text, winner.language, winner.confidence))
         }
         if (arbiter.isLocked) {
             // Idioma confirmado: dejamos de procesar los demás idiomas extranjeros
-            recognizers.keys.filter { it != arbiter.leader && it != Language.SPANISH }.forEach {
+            recognizers.keys.filter { it != arbiter.leader && arbiter.isForeign(it) }.forEach {
                 recognizers.remove(it)?.close()
             }
         }
@@ -165,7 +167,7 @@ internal class VoskSpeechTranscriber @Inject constructor(
         const val START_MAX_SECONDS = 5f
         const val END_SILENCE_SECONDS = 0.5f
         const val MAX_PHRASE_SECONDS = 15f
-        /** El filtro del español solo cierra la frase si oyó español con esta confianza o más. */
+        /** El filtro de la voz del usuario solo cierra la frase si oyó su idioma con esta confianza o más. */
         const val USER_SPEECH_CONFIDENCE = 0.7f
     }
 }

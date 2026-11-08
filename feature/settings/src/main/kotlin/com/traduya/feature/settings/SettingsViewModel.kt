@@ -60,6 +60,10 @@ class SettingsViewModel @Inject constructor(
 
     fun allowCallAudioTap() = callAudioTap.requestPermission()
 
+    fun setMyLanguage(language: Language) {
+        viewModelScope.launch { settingsRepository.setMyLanguage(language) }
+    }
+
     fun setLanguagePreference(preference: CallLanguagePreference) {
         viewModelScope.launch { settingsRepository.setLanguagePreference(preference) }
     }

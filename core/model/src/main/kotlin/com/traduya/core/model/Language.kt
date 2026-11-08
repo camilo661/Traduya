@@ -2,7 +2,7 @@ package com.traduya.core.model
 
 /**
  * Idiomas que Traduya sabe reconocer y traducir.
- * El español es siempre el idioma del usuario; los demás son los de la otra persona.
+ * El usuario elige el suyo en Ajustes (por defecto, español); los demás son los posibles de la otra persona.
  */
 enum class Language(
     val code: String,
@@ -15,7 +15,8 @@ enum class Language(
     CHINESE(code = "zh", localeTag = "zh-CN", displayName = "Chino", flag = "🇨🇳");
 
     companion object {
-        val foreignLanguages: List<Language> = listOf(ENGLISH, CHINESE)
+        /** Idiomas que puede hablar la otra persona si el usuario habla [mine]. */
+        fun othersThan(mine: Language): List<Language> = entries - mine
 
         /** Acepta códigos como "en", "en-US", "zh-Hans" o "zh-Latn". */
         fun fromCode(code: String?): Language? {

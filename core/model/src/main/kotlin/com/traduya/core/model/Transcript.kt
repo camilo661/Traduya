@@ -1,6 +1,6 @@
 package com.traduya.core.model
 
-/** Quién dijo la frase: el usuario (español) o la otra persona. */
+/** Quién dijo la frase: el usuario o la otra persona. */
 enum class Speaker { ME, THEM }
 
 /** Una frase de la llamada con su traducción. */

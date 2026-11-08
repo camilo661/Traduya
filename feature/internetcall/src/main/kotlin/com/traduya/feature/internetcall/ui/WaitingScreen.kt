@@ -156,7 +156,7 @@ private fun HowItWorks() {
             listOf(
                 "Envía el enlace a la otra persona o que escanee el código QR.",
                 "Lo abre en su navegador (iPhone, Android o computadora), se registra una vez con Google y toca Llamar. No instala nada.",
-                "Contestas aquí y ves en español, al instante, todo lo que te dice.",
+                "Contestas aquí y ves en tu idioma, al instante, todo lo que te dice.",
             ).forEachIndexed { index, step ->
                 Row {
                     Text("${index + 1}.", color = Color.White, fontWeight = FontWeight.Bold)

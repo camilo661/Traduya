@@ -10,6 +10,7 @@ import com.traduya.core.domain.internetcall.InternetDirectory
 import com.traduya.core.domain.wifinumber.PhoneNumberRules
 import com.traduya.core.domain.wifinumber.WifiNumberRegistry
 import com.traduya.core.domain.repository.HistoryRepository
+import com.traduya.core.domain.repository.SettingsRepository
 import com.traduya.core.domain.translation.CallTranslationSession
 import com.traduya.core.model.CallDirection
 import com.traduya.core.model.CallStatus
@@ -55,6 +56,7 @@ class InternetCallViewModel @Inject constructor(
     private val callerVerifier: CallerVerifier,
     private val directory: InternetDirectory,
     private val ownCaptions: OwnCaptions,
+    private val settingsRepository: SettingsRepository,
     wifiNumbers: WifiNumberRegistry,
     historyRepository: HistoryRepository,
 ) : AndroidViewModel(application) {
@@ -150,6 +152,7 @@ class InternetCallViewModel @Inject constructor(
             micBlocked = false,
             isRecording = translation.isRecording,
             detectedLanguage = translation.detectedLanguage,
+            targetLanguage = translation.targetLanguage,
             lines = lines,
             hasEnded = peer is PeerState.Ended,
         )
@@ -186,7 +189,7 @@ class InternetCallViewModel @Inject constructor(
             }
             val token = runCatching { directory.sessionToken() }.getOrNull()
                 ?: return@launch bridge.showNotice("No hay conexión. Inténtalo de nuevo.")
-            bridge.call(entry.peerId, token, number)
+            bridge.call(entry.peerId, token, number, myLanguage())
         }
     }
 
@@ -245,7 +248,7 @@ class InternetCallViewModel @Inject constructor(
         captionsJob?.cancel()
         captionsJob = viewModelScope.launch {
             bridge.remoteKind.filter { it == "web" }.first()
-            ownCaptions.start(this, bridge.ownAudio, bridge::sendCaption)
+            ownCaptions.start(this, myLanguage(), bridge.ownAudio, bridge::sendCaption)
         }
     }
 
@@ -262,8 +265,12 @@ class InternetCallViewModel @Inject constructor(
     }
 
     fun answer() {
-        if (caller.value != null) bridge.answer()
+        if (caller.value == null) return
+        viewModelScope.launch { bridge.answer(myLanguage()) }
     }
+
+    /** Idioma del usuario (Ajustes): en él se traduce a la otra persona y se le envían nuestros subtítulos. */
+    private suspend fun myLanguage() = settingsRepository.settings.first().myLanguage
 
     fun hangUp() {
         when (bridge.state.value) {
