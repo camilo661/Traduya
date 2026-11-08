@@ -95,7 +95,7 @@ export async function call(target) {
 function begin(peer, direction) {
   active = {
     peer, direction, peerLang: null, remoteKind: peer.kind, startedAt: null, historyId: null,
-    historyReady: null, liveTurn: 0,
+    historyReady: null, liveTurn: 0, liveBusy: false, pendingLive: null,
   };
   config.ui.onCallStarted(peer, direction);
 }
@@ -144,26 +144,42 @@ function startOwnCaptions() {
   startCaptions(config.lang(), caption => sendCaption(caption));
 }
 
-/** Traduce lo que dijo la otra persona al idioma de la página y lo guarda en el historial. */
-async function showCaption(current, { text, final, lang }) {
+/**
+ * Traduce lo que dijo la otra persona al idioma de la página.
+ * La frase en curso se traduce de una en una: mientras hay una traducción en camino, solo se guarda el texto
+ * más reciente y se traduce al terminar (no se pide una traducción por cada palabra: es más rápido y gasta
+ * menos del límite diario del traductor). La frase terminada se traduce siempre y se guarda en el historial.
+ */
+async function showCaption(current, caption) {
   if (!config) return;
   const to = config.lang();
-  const from = lang || current.peerLang || to;
+  const from = caption.lang || current.peerLang || to;
   if (!current.peerLang) {
     current.peerLang = from;
     config.ui.onLanguages(from, to);
   }
-  // La frase en curso se traduce con cada cambio; si llega una más nueva, la anterior se descarta
-  const turn = ++current.liveTurn;
-  const translated = await translate(text, from, to);
-  if (!config || active !== current) return;
-  if (!final) {
-    if (turn === current.liveTurn) config.ui.onLive(translated);
+  if (!caption.final) {
+    current.pendingLive = caption.text;
+    if (current.liveBusy) return;
+    current.liveBusy = true;
+    while (current.pendingLive) {
+      const text = current.pendingLive;
+      current.pendingLive = null;
+      const turn = current.liveTurn;
+      const translated = await translate(text, from, to);
+      // Si mientras tanto la frase terminó, esta traducción en vivo ya no sirve
+      if (config && active === current && turn === current.liveTurn) config.ui.onLive(translated);
+    }
+    current.liveBusy = false;
     return;
   }
-  config.ui.onLine({ translated, original: from !== to ? text : '' });
+  current.pendingLive = null;
+  current.liveTurn++;
+  const translated = await translate(caption.text, from, to);
+  if (!config || active !== current) return;
+  config.ui.onLine({ translated, original: from !== to ? caption.text : '' });
   const id = await current.historyReady;
-  if (id) addLine(config.uid, await config.getToken(), id, { original: text, translated, from }).catch(() => {});
+  if (id) addLine(config.uid, await config.getToken(), id, { original: caption.text, translated, from }).catch(() => {});
 }
 
 export function hangUp() {
