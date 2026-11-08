@@ -14,14 +14,16 @@ data class Hypothesis(
  * Detección automática de idioma: varios reconocedores escuchan la misma frase
  * y gana el que la entendió con más confianza.
  *
- * Tras [winsToLock] victorias seguidas del mismo idioma extranjero se fija ese idioma,
- * así el teléfono deja de procesar los demás y va más rápido.
+ * Tras [winsToLock] victorias seguidas del mismo idioma extranjero, o una sola muy clara
+ * (confianza de [instantLockConfidence] o más), se fija ese idioma: el teléfono deja de procesar
+ * los demás y la traducción va mucho más rápida.
  * El español se trata aparte: significa que habló el usuario y nunca se fija.
  */
 class LanguageArbiter(
     foreignLanguages: List<Language>,
     private val minConfidence: Float = 0.5f,
-    private val winsToLock: Int = 3,
+    private val winsToLock: Int = 2,
+    private val instantLockConfidence: Float = 0.9f,
 ) {
     init {
         require(foreignLanguages.isNotEmpty()) { "Se necesita al menos un idioma extranjero" }
@@ -48,7 +50,9 @@ class LanguageArbiter(
             leader = best.language
             streak = 1
         }
-        if (streak >= winsToLock) isLocked = true
+        // Una frase de varias palabras entendida con mucha confianza basta para fijar el idioma
+        val clearWin = best.wordCount >= MIN_WORDS_FOR_INSTANT_LOCK && best.confidence >= instantLockConfidence
+        if (streak >= winsToLock || clearWin) isLocked = true
         return best
     }
 
@@ -62,6 +66,7 @@ class LanguageArbiter(
         }
 
     private companion object {
+        const val MIN_WORDS_FOR_INSTANT_LOCK = 3
         val SEPARATORS = Regex("[\\s\\p{Punct}，。！？、]+")
         val FILLERS = setOf(
             "oh", "uh", "um", "ah", "eh", "hm", "hmm", "huh", "mm", "mhm", "the", "a",

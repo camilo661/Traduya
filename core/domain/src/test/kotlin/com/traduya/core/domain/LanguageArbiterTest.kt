@@ -56,15 +56,34 @@ class LanguageArbiterTest {
     }
 
     @Test
-    fun `locks after three wins in a row`() {
+    fun `locks after two wins in a row`() {
         val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
 
-        repeat(2) { arbiter.decide(listOf(en(0.9f), zh(0.4f))) }
+        arbiter.decide(listOf(en(0.8f), zh(0.4f)))
         assertFalse(arbiter.isLocked)
-        arbiter.decide(listOf(en(0.9f), zh(0.4f)))
+        arbiter.decide(listOf(en(0.8f), zh(0.4f)))
 
         assertTrue(arbiter.isLocked)
         assertEquals(Language.ENGLISH, arbiter.leader)
+    }
+
+    @Test
+    fun `locks at once after a very clear phrase`() {
+        val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
+
+        arbiter.decide(listOf(en(0.95f), zh(0.4f)))
+
+        assertTrue(arbiter.isLocked)
+        assertEquals(Language.ENGLISH, arbiter.leader)
+    }
+
+    @Test
+    fun `a clear single word is not enough to lock`() {
+        val arbiter = LanguageArbiter(listOf(Language.ENGLISH, Language.CHINESE))
+
+        arbiter.decide(listOf(en(0.95f, words = 1), zh(0.4f)))
+
+        assertFalse(arbiter.isLocked)
     }
 
     @Test
