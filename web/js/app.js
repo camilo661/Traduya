@@ -10,7 +10,7 @@ import {
 import { RegistrationError, finishRegistration, isRegistered, profileOf, saveDraft, validateProfile } from './registration.js';
 import { countries, defaultCountry, dialCodeOf, internationalNumber, splitInternational } from './countries.js';
 import { CallError, lookupNumber, normalizeNumber } from './directory.js';
-import { answer, call, decline, hangUp, setMuted, startPhone, stopPhone } from './phone.js';
+import { answer, call, changeLanguage, decline, hangUp, setMuted, startPhone, stopPhone } from './phone.js';
 import { createDialpad } from './dialpad.js';
 import { listCalls, listLines } from './history.js';
 import { getRecording } from './recordings.js';
@@ -87,7 +87,12 @@ function renderCountries(select) {
 }
 
 document.querySelectorAll('[data-lang]').forEach(button => {
-  button.onclick = () => { setLanguage(button.dataset.lang); render(); };
+  button.onclick = () => {
+    setLanguage(button.dataset.lang);
+    // En plena llamada también cambia el idioma al que se traduce y en el que se reconoce mi voz
+    changeLanguage();
+    render();
+  };
 });
 
 // endregion

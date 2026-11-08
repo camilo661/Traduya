@@ -3,7 +3,7 @@
 import { identifyCaller } from './verify.js';
 import { goOffline, goOnline } from './presence.js';
 import { startPeer, stopPeer } from './peer.js';
-import { acceptCall, attachIncomingData, hangUp as endCall, placeCall, sendCaption, setMuted } from './call.js';
+import { acceptCall, attachIncomingData, hangUp as endCall, placeCall, sendCaption, setCallLanguage, setMuted } from './call.js';
 import { CallError, resolvePeerId } from './directory.js';
 import { startCaptions, stopCaptions } from './captions.js';
 import { translate } from './translate.js';
@@ -95,7 +95,7 @@ export async function call(target) {
 function begin(peer, direction) {
   active = {
     peer, direction, peerLang: null, remoteKind: peer.kind, startedAt: null, historyId: null,
-    historyReady: null, liveTurn: 0, liveBusy: false, pendingLive: null,
+    historyReady: null, liveTurn: 0, liveBusy: false, pendingLive: null, ownCaptions: false,
   };
   config.ui.onCallStarted(peer, direction);
 }
@@ -115,13 +115,13 @@ function callEvents() {
         .catch(() => null);
       config.ui.onConnected();
       // Si ya sabemos que la otra persona usa la web, le enviamos los subtítulos de nuestra voz
-      if (current.remoteKind === 'web') startOwnCaptions();
+      if (current.remoteKind === 'web') startOwnCaptions(current);
     },
     onHello: ({ kind, lang }) => {
       current.remoteKind = kind;
       current.peerLang = lang;
       config?.ui.onLanguages(lang, config.lang());
-      if (kind === 'web') startOwnCaptions();
+      if (kind === 'web') startOwnCaptions(current);
     },
     onCaption: caption => showCaption(current, caption),
     onRecording: blob => current.historyReady?.then(id => { if (id) saveRecording(id, blob); }),
@@ -140,8 +140,24 @@ function callEvents() {
   };
 }
 
-function startOwnCaptions() {
+function startOwnCaptions(current) {
+  current.ownCaptions = true;
   startCaptions(config.lang(), caption => sendCaption(caption));
+}
+
+/**
+ * El usuario eligió otro idioma durante la llamada: desde ahora la otra persona se traduce a ese idioma,
+ * nuestra voz se reconoce en él y el otro lado lo sabe para traducirnos bien.
+ */
+export function changeLanguage() {
+  if (!config || !active) return;
+  const lang = config.lang();
+  setCallLanguage(lang);
+  if (active.ownCaptions) {
+    stopCaptions();
+    startOwnCaptions(active);
+  }
+  if (active.peerLang) config.ui.onLanguages(active.peerLang, lang);
 }
 
 /**

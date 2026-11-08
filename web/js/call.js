@@ -80,6 +80,13 @@ export function sendCaption(caption) {
   if (state?.data?.open) state.data.send({ type: 'caption', ...caption, lang: state.lang });
 }
 
+/** El usuario cambió de idioma durante la llamada: se avisa al otro lado para que traduzca desde el nuevo. */
+export function setCallLanguage(lang) {
+  if (!state || state.lang === lang) return;
+  state.lang = lang;
+  if (state.data?.open) state.data.send({ type: 'hello', kind: 'web', lang });
+}
+
 export function hangUp() {
   if (state) end(state, 'ended');
 }

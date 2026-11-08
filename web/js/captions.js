@@ -14,7 +14,8 @@ export const captionsSupported = () => Boolean(Recognition);
 export function startCaptions(lang, onCaption) {
   if (!Recognition || active) return;
   active = true;
-  recognition = new Recognition();
+  const current = new Recognition();
+  recognition = current;
   recognition.lang = RECOGNITION_LANG[lang] ?? 'en-US';
   recognition.continuous = true;
   recognition.interimResults = true;
@@ -26,7 +27,9 @@ export function startCaptions(lang, onCaption) {
     }
   };
   // El navegador corta el reconocimiento tras un silencio: se reanuda mientras dure la llamada
-  recognition.onend = () => { if (active) setTimeout(() => { try { recognition.start(); } catch (e) { /* ya activo */ } }, 300); };
+  recognition.onend = () => {
+    if (active && recognition === current) setTimeout(() => { try { current.start(); } catch (e) { /* ya activo */ } }, 300);
+  };
   try { recognition.start(); } catch (e) { active = false; }
 }
 
