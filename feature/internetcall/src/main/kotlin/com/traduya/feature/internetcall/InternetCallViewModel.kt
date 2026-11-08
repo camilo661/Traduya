@@ -211,7 +211,8 @@ class InternetCallViewModel @Inject constructor(
             PeerState.InCall -> {
                 connectedAtMillis = System.currentTimeMillis()
                 audioRouter.startCall(speaker.value)
-                session.connect(bridge.remoteAudio)
+                // Por internet solo llega la voz de la otra persona
+                session.connect(bridge.remoteAudio, includesUserVoice = false)
                 startOwnCaptionsForWeb()
             }
 

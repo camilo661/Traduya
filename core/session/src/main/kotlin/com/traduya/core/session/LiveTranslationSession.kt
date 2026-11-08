@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -77,6 +77,7 @@ internal class LiveTranslationSession @Inject constructor(
     private val phraseId = AtomicLong(0)
 
     private var connectedAtMillis: Long? = null
+    private var userVoiceInAudio = true
     private var settings = AppSettings()
     private var audioJob: Job? = null
     private var translationJob: Job? = null
@@ -99,9 +100,10 @@ internal class LiveTranslationSession @Inject constructor(
         }
     }
 
-    override fun connect(audio: Flow<AudioChunk>) {
+    override fun connect(audio: Flow<AudioChunk>, includesUserVoice: Boolean) {
         if (connectedAtMillis != null) return
         connectedAtMillis = System.currentTimeMillis()
+        userVoiceInAudio = includesUserVoice
         if (settings.recordCalls || _state.value.enabled) startAudio(audio)
         if (_state.value.enabled) startTranslation()
     }
@@ -124,6 +126,7 @@ internal class LiveTranslationSession @Inject constructor(
             historyRepository.finishCall(historyId, duration, languages.dominant(), recordingPath)
         }
         connectedAtMillis = null
+        userVoiceInAudio = true
         languages.reset()
         livePhrase.value = null
         _state.value = TranslationSessionState()
@@ -154,7 +157,10 @@ internal class LiveTranslationSession @Inject constructor(
 
     private fun startTranslation() {
         if (translationJob?.isActive == true) return
-        val config = TranscriptionConfig(foreignLanguages = settings.languagePreference.foreignCandidates)
+        val config = TranscriptionConfig(
+            foreignLanguages = settings.languagePreference.foreignCandidates,
+            ignoreUserSpeech = userVoiceInAudio,
+        )
         _state.update { it.copy(status = TranslationStatus.PREPARING, errorMessage = null) }
         translationJob = scope.launch {
             transcriber.transcribe(audio, config).collect(::onSpeechEvent)
@@ -195,11 +201,15 @@ internal class LiveTranslationSession @Inject constructor(
         }
     }
 
-    /** Traduce la frase en curso cada vez que cambia; si llega una más nueva, la anterior se abandona. */
+    /**
+     * Traduce la frase en curso mientras la otra persona habla. Cada traducción se termina (no se cancela
+     * cuando llega una palabra nueva, porque si no, al hablar seguido nunca se vería nada) y luego se
+     * toma directamente el texto más reciente.
+     */
     private suspend fun translateLivePhrases() {
         livePhrase
             .filterNotNull()
-            .mapLatest { phrase ->
+            .map { phrase ->
                 phrase to runCatching {
                     translationEngine.translate(phrase.text, phrase.language, Language.SPANISH)
                 }.getOrNull()

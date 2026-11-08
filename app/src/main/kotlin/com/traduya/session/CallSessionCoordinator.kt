@@ -55,7 +55,10 @@ class CallSessionCoordinator @Inject constructor(
         }
         if (call.status == CallStatus.ACTIVE && !connected) {
             connected = true
-            session.connect(callAudio(settingsRepository.settings.first().autoSpeaker))
+            // Con Shizuku solo llega la voz de la otra persona; con el micrófono también se oye al usuario
+            callAudioTap.refresh()
+            val throughLine = callAudioTap.status.value == CallAudioTapStatus.READY
+            session.connect(callAudio(settingsRepository.settings.first().autoSpeaker), includesUserVoice = !throughLine)
         }
     }
 
